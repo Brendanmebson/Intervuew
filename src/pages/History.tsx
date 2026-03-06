@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import SidebarLayout from '../components/SidebarLayout';
 import { SoftCard, ScoreChip, GradientButton } from '../components/shared';
 import { Icon } from '../components/Icons';
-import { COLORS, RADIUS } from '../theme/theme';
+import { COLORS } from '../theme/theme';
 import { ALL_SESSIONS } from '../data/sessions';
 
 type FilterMode = 'All' | 'Auto' | 'Manual';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo, GradientButton } from './shared';
 import { COLORS } from '../theme/theme';

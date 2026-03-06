@@ -4,28 +4,45 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme/theme';
 
-import Nav          from './components/Nav';
-import Footer       from './components/Footer';
-import Landing      from './pages/Landing';
-import Login        from './pages/Login';
-import PrepperDash  from './pages/PrepperDash';
-import Interview    from './pages/Interview';
-import Report       from './pages/Report';           // now reads :id from URL
-import Reports      from './pages/Reports';          // new aggregate reports page
-import History      from './pages/History';          // new history page
-import Settings     from './pages/Settings';         // new settings page
-import OrgDash      from './pages/OrgDash';
-import Features     from './pages/Features';
-import ForTeams     from './pages/ForTeams';
-import Pricing      from './pages/Pricing';
-import Demo         from './pages/Demo';
-import Privacy      from './pages/Privacy';
-import Terms        from './pages/Terms';
-import Contact      from './pages/Contact';
-import NotFound     from './pages/NotFound';
+import Nav               from './components/Nav';
+import Footer            from './components/Footer';
+import Landing           from './pages/Landing';
+import Login             from './pages/Login';
 
-// Pages where Nav/Footer are hidden (app shell pages)
-const BARE_ROUTES = ['/interview', '/dashboard', '/org', '/report', '/reports', '/history', '/settings'];
+// Prepper (individual user) app
+import PrepperDash       from './pages/PrepperDash';
+import Interview         from './pages/Interview';
+import Report            from './pages/Report';
+import Reports           from './pages/Reports';
+import History           from './pages/History';
+import Settings          from './pages/Settings';
+
+// Org app
+import OrgDash           from './pages/OrgDash';
+import OrgJobRoles       from './pages/OrgJobRoles';
+import OrgRoleDetail     from './pages/OrgRoleDetail';
+import OrgCreateRole     from './pages/OrgCreateRole';
+import OrgCandidates     from './pages/OrgCandidates';
+import OrgCandidateDetail from './pages/OrgCandidateDetail';
+import OrgInterviews     from './pages/OrgInterviews';
+import OrgAnalytics      from './pages/OrgAnalytics';
+import OrgSettings       from './pages/OrgSettings';
+
+// Marketing
+import Features          from './pages/Features';
+import ForTeams          from './pages/ForTeams';
+import Pricing           from './pages/Pricing';
+import Demo              from './pages/Demo';
+import Privacy           from './pages/Privacy';
+import Terms             from './pages/Terms';
+import Contact           from './pages/Contact';
+import NotFound          from './pages/NotFound';
+
+// Hide Nav/Footer on all app shell pages
+const BARE_PREFIXES = [
+  '/interview', '/dashboard', '/report', '/reports', '/history', '/settings',
+  '/org',
+];
 
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
@@ -37,7 +54,7 @@ const ScrollToTop: React.FC = () => {
 
 const AppShell: React.FC = () => {
   const { pathname } = useLocation();
-  const isBare  = BARE_ROUTES.some(r => pathname.startsWith(r));
+  const isBare  = BARE_PREFIXES.some(p => pathname.startsWith(p));
   const isLogin = pathname === '/login';
 
   return (
@@ -45,7 +62,7 @@ const AppShell: React.FC = () => {
       <ScrollToTop />
       {!isBare && !isLogin && <Nav />}
       <Routes>
-        {/* Marketing */}
+        {/* ── Marketing ─────────────────────────────── */}
         <Route path="/"          element={<Landing />} />
         <Route path="/login"     element={<Login />} />
         <Route path="/features"  element={<Features />} />
@@ -56,18 +73,26 @@ const AppShell: React.FC = () => {
         <Route path="/terms"     element={<Terms />} />
         <Route path="/contact"   element={<Contact />} />
 
-        {/* App — prepper */}
+        {/* ── Prepper app ───────────────────────────── */}
         <Route path="/dashboard"   element={<PrepperDash />} />
         <Route path="/interview"   element={<Interview />} />
-        <Route path="/report/:id"  element={<Report />} />    {/* individual session report */}
-        <Route path="/reports"     element={<Reports />} />   {/* aggregate analytics */}
+        <Route path="/report/:id"  element={<Report />} />
+        <Route path="/reports"     element={<Reports />} />
         <Route path="/history"     element={<History />} />
         <Route path="/settings"    element={<Settings />} />
 
-        {/* App — org */}
-        <Route path="/org"         element={<OrgDash />} />
+        {/* ── Org app ───────────────────────────────── */}
+        <Route path="/org"                         element={<OrgDash />} />
+        <Route path="/org/roles"                   element={<OrgJobRoles />} />
+        <Route path="/org/roles/new"               element={<OrgCreateRole />} />
+        <Route path="/org/roles/:id"               element={<OrgRoleDetail />} />
+        <Route path="/org/candidates"              element={<OrgCandidates />} />
+        <Route path="/org/candidates/:id"          element={<OrgCandidateDetail />} />
+        <Route path="/org/interviews"              element={<OrgInterviews />} />
+        <Route path="/org/analytics"               element={<OrgAnalytics />} />
+        <Route path="/org/settings"                element={<OrgSettings />} />
 
-        <Route path="*"            element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       {!isBare && !isLogin && <Footer />}
     </>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography, TextField } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icons';
 import { SoftCard, GradientButton, OrbBackground, SectionLabel } from '../components/shared';
 import { COLORS, RADIUS } from '../theme/theme';
@@ -15,7 +14,6 @@ const highlights = [
 ];
 
 const Demo: React.FC = () => {
-  const nav = useNavigate();
   const [tab, setTab] = useState<'book' | 'watch'>('book');
   const [submitted, setSubmitted] = useState(false);
 

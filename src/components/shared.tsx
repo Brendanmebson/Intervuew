@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { LogoSVG, Icon } from './Icons';
+import { LogoSVG } from './Icons';
 import { COLORS, SHADOWS, RADIUS } from '../theme/theme';
 import { InterviewStatus } from '../types';
 
@@ -46,7 +46,7 @@ interface GradientButtonProps {
   onClick?: () => void;
   to?: string;                       // navigate to route
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'gradient' | 'ghost' | 'dark';
+  variant?: 'gradient' | 'ghost' | 'dark' | 'danger' | 'success'; // can also pass
   fullWidth?: boolean;
   sx?: object;
   startIcon?: React.ReactNode;

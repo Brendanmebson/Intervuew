@@ -3,12 +3,11 @@ import { Box, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icons';
-import { SoftCard, GlassCard, GradientButton, OrbBackground, SectionLabel, Logo } from '../components/shared';
+import { SoftCard, GlassCard, GradientButton, OrbBackground, SectionLabel } from '../components/shared';
 import { COLORS } from '../theme/theme';
 
 const Landing: React.FC = () => {
   const nav = useNavigate();
-  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <Box sx={{ minHeight: '100vh', overflowX: 'hidden' }}>

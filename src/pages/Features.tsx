@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icons';
 import { SoftCard, GradientButton, OrbBackground, SectionLabel } from '../components/shared';
 import { COLORS } from '../theme/theme';
@@ -18,7 +17,6 @@ const features = [
 ];
 
 const Features: React.FC = () => {
-  const nav = useNavigate();
   return (
     <Box sx={{ pt: '64px' }}>
       {/* Hero */}
