@@ -61,6 +61,8 @@ export const GradientButton: React.FC<GradientButtonProps> = ({
     gradient: { background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`, color: '#fff', border: 'none', '&:hover': { boxShadow: SHADOWS.glow, filter: 'brightness(1.05)' } },
     ghost:    { background: 'transparent', color: COLORS.text, border: '1.5px solid rgba(0,0,0,0.12)', '&:hover': { background: COLORS.white, borderColor: COLORS.indigo, color: COLORS.indigo } },
     dark:     { background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)', '&:hover': { background: 'rgba(255,255,255,0.14)' } },
+    danger:   { background: 'rgba(239,68,68,0.08)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', '&:hover': { background: 'rgba(239,68,68,0.14)' } },
+success:  { background: 'rgba(16,185,129,0.08)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)', '&:hover': { background: 'rgba(16,185,129,0.14)' } },
   };
   return (
     <Box component="button" onClick={handleClick} sx={{
