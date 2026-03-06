@@ -153,7 +153,7 @@ const OrgCandidateDetail: React.FC = () => {
           <SoftCard sx={{ p: '22px 24px' }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: '14px' }}>Actions</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <GradientButton fullWidth size="sm" onClick={() => setStatus('Recommended')} variant="success" style={{}}>
+              <GradientButton fullWidth size="sm" onClick={() => setStatus('Recommended')} variant="success">
                 ✓ Mark as Recommended
               </GradientButton>
               <GradientButton fullWidth size="sm" variant="ghost" onClick={() => nav(`/org/roles/${CANDIDATES.find(c => c.id === id)?.roleId}`)}>
@@ -162,7 +162,7 @@ const OrgCandidateDetail: React.FC = () => {
               <GradientButton fullWidth size="sm" variant="ghost" onClick={() => nav('/interview')}>
                 Schedule Re-interview
               </GradientButton>
-              <GradientButton fullWidth size="sm" variant="danger" style={{}} onClick={() => setStatus('Declined')}>
+              <GradientButton fullWidth size="sm" variant="danger" onClick={() => setStatus('Declined')}>
                 Decline Candidate
               </GradientButton>
             </Box>

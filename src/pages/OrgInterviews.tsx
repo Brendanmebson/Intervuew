@@ -4,9 +4,8 @@ import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
 import SidebarLayout from '../components/SidebarLayout';
 import { SoftCard, GradientButton, ScoreChip } from '../components/shared';
-import { Icon } from '../components/Icons';
+import { CANDIDATES } from '../data/orgData';
 import { COLORS } from '../theme/theme';
-import { CANDIDATES, JOB_ROLES } from '../data/orgData';
 
 const OrgInterviews: React.FC = () => {
   const nav = useNavigate();

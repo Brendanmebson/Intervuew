@@ -114,7 +114,7 @@ const OrgDash: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '13px' }}>
-          {activeRoles.slice(0, 3).map((r, i) => (
+          {activeRoles.slice(0, 3).map((r) => (
             <SoftCard
               key={r.id}
               sx={{ p: '20px 22px', cursor: 'pointer' }}

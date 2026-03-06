@@ -187,8 +187,8 @@ const OrgSettings: React.FC = () => {
         <SoftCard sx={{ p: '22px 26px', border: `1px solid ${alpha(COLORS.red, 0.15)}`, background: alpha(COLORS.red, 0.02) }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700, color: COLORS.red, mb: '12px' }}>Danger Zone</Typography>
           <Box sx={{ display: 'flex', gap: '10px' }}>
-            <GradientButton size="sm" variant="danger" style={{}}>Delete All Data</GradientButton>
-            <GradientButton size="sm" variant="danger" style={{}} onClick={() => nav('/login')}>Sign Out</GradientButton>
+            <GradientButton size="sm" variant="danger">Delete All Data</GradientButton>
+            <GradientButton size="sm" variant="danger" onClick={() => nav('/login')}>Sign Out</GradientButton>
           </Box>
         </SoftCard>
       </Box>
