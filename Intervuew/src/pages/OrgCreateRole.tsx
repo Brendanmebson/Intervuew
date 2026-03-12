@@ -66,7 +66,7 @@ const Field: React.FC<{
 );
 
 const OrgCreateRole: React.FC = () => {
-  const [interview, setInterview] = useState<InterviewDict>({});
+  const [interview, setInterview] = useState<InterviewDict | {}>({});
 
   const createInterview = async () => {};
   const nav = useNavigate();
