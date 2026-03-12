@@ -149,7 +149,6 @@ const LiveInterviewPage: React.FC = () => {
             setInterviewState('speaking');
             setTranscript((t) => [...t, { speaker: 'AI', text: INTERVIEW_QUESTIONS[nextQ] }]);
           } else {
-            // Mark as done so dashboard no longer shows pending card
             markInterviewDone();
             setInterviewState('completed');
           }
@@ -158,14 +157,13 @@ const LiveInterviewPage: React.FC = () => {
     }
   };
 
-  const getStateLabel = () => {
+  const getStateLabel = (): string => {
     switch (interviewState) {
       case 'idle': return 'Ready to start';
       case 'speaking': return 'AI is speaking...';
       case 'listening': return 'Listening...';
       case 'thinking': return 'AI is thinking...';
       case 'completed': return 'Interview complete';
-      default: return '';
     }
   };
 
@@ -277,7 +275,13 @@ const LiveInterviewPage: React.FC = () => {
 
           <Box sx={{ mt: 3.5, mb: 2, textAlign: 'center' }}>
             <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', letterSpacing: '0.1em', fontWeight: 600, mb: 0.75 }}>
-              {interviewState === 'speaking' ? 'AI INTERVIEWER' : interviewState === 'listening' ? 'RECORDING' : interviewState === 'thinking' ? 'PROCESSING' : 'READY'}
+              {interviewState === 'speaking'
+                ? 'AI INTERVIEWER'
+                : interviewState === 'listening'
+                  ? 'RECORDING'
+                  : interviewState === 'thinking'
+                    ? 'PROCESSING'
+                    : 'READY'}
             </Typography>
             {interviewState !== 'idle' && (
               <Typography sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '1rem', maxWidth: 440, textAlign: 'center', lineHeight: 1.65 }}>
@@ -304,7 +308,7 @@ const LiveInterviewPage: React.FC = () => {
             </Box>
             <LinearProgress
               variant="determinate"
-              value={((currentQ + (interviewState === 'completed' ? 1 : 0)) / INTERVIEW_QUESTIONS.length) * 100}
+              value={((currentQ + 1) / INTERVIEW_QUESTIONS.length) * 100}
               sx={{
                 height: 4, borderRadius: 99, bgcolor: 'rgba(255,255,255,0.08)',
                 '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg, #5B5DF6, #9B8FFF)', borderRadius: 99 },
@@ -354,7 +358,15 @@ const LiveInterviewPage: React.FC = () => {
             </IconButton>
           )}
           <Typography sx={{ mt: 2, fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
-            {interviewState === 'idle' ? '' : isMicOn ? 'Tap to stop recording' : interviewState === 'thinking' ? 'Processing...' : interviewState === 'speaking' ? 'Wait for the question' : 'Tap microphone to answer'}
+            {interviewState === 'idle'
+              ? ''
+              : isMicOn
+                ? 'Tap to stop recording'
+                : interviewState === 'thinking'
+                  ? 'Processing...'
+                  : interviewState === 'speaking'
+                    ? 'Wait for the question'
+                    : 'Tap microphone to answer'}
           </Typography>
         </Box>
 

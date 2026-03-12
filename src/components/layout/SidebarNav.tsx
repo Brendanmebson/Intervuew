@@ -141,8 +141,8 @@ const SidebarNav: React.FC<SidebarNavProps> = ({ items, bottomItems = [] }) => {
           </Avatar>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography
-              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0F1115', lineHeight: 1.3, noWrap: true }}
               noWrap
+              sx={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0F1115', lineHeight: 1.3 }}
             >
               {user?.name}
             </Typography>
