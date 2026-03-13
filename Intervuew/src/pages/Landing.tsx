@@ -1,525 +1,252 @@
-import React from "react";
-import { Box, Typography } from "@mui/material";
-import { alpha } from "@mui/material/styles";
+import React, { useState } from "react";
+import {
+  Box, Typography, Button, AppBar, Toolbar, alpha, Chip, IconButton,
+} from "@mui/material";
+import {
+  AutoAwesome, Psychology, RecordVoiceOver, Assessment,
+  CheckCircleOutline, PlayArrow, ArrowForward,
+  TrendingUp, Groups, WorkspacePremium, Speed,
+  ContentCopy, OpenInNew,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../components/Icons";
-import {
-  SoftCard,
-  GlassCard,
-  GradientButton,
-  OrbBackground,
-  SectionLabel,
-} from "../components/shared";
+import { SoftCard, GradientButton } from "../components/shared";
 import { COLORS } from "../theme/theme";
 
+/* ─── Hero Mockup (kept from original) ─────────────────────────── */
+const HeroMockup = () => (
+  <Box sx={{ position: "relative", width: "100%", maxWidth: 480, mx: "auto" }}>
+    <SoftCard sx={{ p: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+        <Box sx={{
+          width: 36, height: 36, borderRadius: "50%",
+          background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Psychology sx={{ color: "#fff", fontSize: 18 }} />
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: "0.8rem", fontWeight: 700, color: "#0F1115" }}>
+            AI Interview in Progress
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#22C55E" }} />
+            <Typography sx={{ fontSize: "0.7rem", color: "#22C55E", fontWeight: 600 }}>LIVE</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ ml: "auto" }}>
+          <Typography sx={{ fontSize: "0.8rem", fontWeight: 600, color: "#8B8FA8" }}>14:32</Typography>
+        </Box>
+      </Box>
+      {/* Waveform */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 2.5, height: 32 }}>
+        {[3, 6, 9, 14, 8, 12, 5, 10, 16, 7, 11, 4, 9, 13, 6, 8, 11, 5].map((h, i) => (
+          <Box key={i} sx={{
+            width: 3, height: h * 2, borderRadius: 2,
+            background: `linear-gradient(180deg,${COLORS.indigo},${COLORS.lavender})`,
+            opacity: 0.6 + (i % 3) * 0.15,
+          }} />
+        ))}
+      </Box>
+      <Typography sx={{ fontSize: "0.8rem", color: "#5A5E72", mb: 1.5, lineHeight: 1.6 }}>
+        "Tell me about a time you led a cross-functional team through a challenging project..."
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1 }}>
+        {["Communication", "Technical", "Clarity"].map((tag) => (
+          <Chip key={tag} label={tag} size="small" sx={{
+            bgcolor: alpha(COLORS.indigo, 0.08), color: COLORS.indigo,
+            fontSize: "0.65rem", fontWeight: 600, height: 20,
+          }} />
+        ))}
+      </Box>
+    </SoftCard>
+
+    {/* Floating score card */}
+    <Box sx={{
+      position: "absolute", top: -20, right: -28,
+      background: "#fff",
+      border: `1px solid ${alpha(COLORS.indigo, 0.12)}`,
+      borderRadius: 1, p: 1.5,
+      boxShadow: "0 8px 24px rgba(91,93,246,0.15)",
+      minWidth: 120,
+    }}>
+      <Typography sx={{ fontSize: "0.65rem", color: "#8B8FA8", fontWeight: 600, mb: 0.5, letterSpacing: "0.08em" }}>
+        AI SCORE
+      </Typography>
+      <Typography sx={{ fontSize: "1.5rem", fontWeight: 800, color: COLORS.indigo, lineHeight: 1 }}>
+        87
+        <Typography component="span" sx={{ fontSize: "0.8rem", color: "#8B8FA8", fontWeight: 400 }}>/100</Typography>
+      </Typography>
+      <Box sx={{ mt: 1, width: "100%", height: 4, borderRadius: 99, bgcolor: alpha(COLORS.indigo, 0.1), overflow: "hidden" }}>
+        <Box sx={{ width: "87%", height: "100%", borderRadius: 99, background: `linear-gradient(90deg,${COLORS.indigo},${COLORS.lavender})` }} />
+      </Box>
+    </Box>
+
+    {/* Floating transcript chip */}
+    <Box sx={{
+      position: "absolute", bottom: -16, left: -20,
+      background: "#fff",
+      border: `1px solid ${alpha("#22C55E", 0.2)}`,
+      borderRadius: 2, px: 1.5, py: 1,
+      boxShadow: "0 6px 20px rgba(34,197,94,0.12)",
+      display: "flex", alignItems: "center", gap: 1,
+    }}>
+      <RecordVoiceOver sx={{ fontSize: 14, color: "#22C55E" }} />
+      <Typography sx={{ fontSize: "0.7rem", fontWeight: 600, color: "#22C55E" }}>Transcribing live...</Typography>
+    </Box>
+  </Box>
+);
+
+/* ─── Data (from new) ───────────────────────────────────────────── */
+const problems = [
+  {
+    icon: "shield", label: "Interviewer Bias",
+    desc: "Interviewers unconsciously favor candidates similar to themselves.",
+    color: COLORS.red,
+  },
+  {
+    icon: "chart", label: "Inconsistent Scoring",
+    desc: "No two interviews are evaluated the same way.",
+    color: COLORS.amber,
+  },
+  {
+    icon: "zap", label: "Fragmented Tools",
+    desc: "Teams juggle Zoom, spreadsheets, and email — data gets lost.",
+    color: COLORS.purple,
+  },
+  {
+    icon: "clock", label: "High Screening Cost",
+    desc: "Senior engineers spend hours on calls AI could handle instantly.",
+    color: COLORS.blue,
+  },
+];
+
+const features = [
+  {
+    icon: "mic", title: "Real-Time Voice AI",
+    desc: "Sub-2s AI responses with natural conversational flow.",
+    color: COLORS.indigo, wide: true,
+  },
+  {
+    icon: "chart", title: "Deep Analytics",
+    desc: "Per-question scoring, clarity, and benchmarks.",
+    color: COLORS.purple,
+  },
+  {
+    icon: "shield", title: "Bias-Free Evaluation",
+    desc: "Standardized rubrics applied identically, every time.",
+    color: COLORS.pink,
+  },
+  {
+    icon: "zap", title: "Instant Transcription",
+    desc: "Accurate speech-to-text with real-time processing.",
+    color: COLORS.amber,
+  },
+  {
+    icon: "users", title: "Team Collaboration",
+    desc: "Share reports and make hiring decisions together.",
+    color: COLORS.green,
+  },
+];
+
+/* ─── Page ──────────────────────────────────────────────────────── */
 const Landing: React.FC = () => {
-  const nav = useNavigate();
+  const navigate = useNavigate();
+  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
 
   return (
-    <Box sx={{ minHeight: "100vh", overflowX: "hidden" }}>
-      {/* HERO */}
-      <Box
-        id="hero"
-        component="section"
-        sx={{
-          position: "relative",
-          pt: "120px",
-          pb: "80px",
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          className="dot-grid"
-          sx={{ position: "absolute", inset: 0, opacity: 0.55 }}
-        />
-        <OrbBackground />
-        <Box
-          sx={{ maxWidth: 1140, mx: "auto", px: "48px", position: "relative" }}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "64px",
-              alignItems: "center",
-            }}
-          >
-            <Box className="fade-up">
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 1,
-                  background: alpha(COLORS.indigo, 0.08),
-                  border: `1px solid ${alpha(COLORS.indigo, 0.2)}`,
-                  borderRadius: "20px",
-                  px: "14px",
-                  py: "5px",
-                  mb: "26px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: COLORS.indigo,
-                  letterSpacing: "0.05em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: COLORS.indigo,
-                  }}
-                />
-                Live AI Platform
-              </Box>
-              <Typography
-                variant="h1"
-                sx={{ fontSize: "clamp(40px,4.8vw,64px)", mb: "20px" }}
-              >
-                AI Interviews
-                <br />
-                That{" "}
-                <Box
-                  component="span"
-                  sx={{
-                    background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  Think.
-                </Box>
-                <br />
-                Listen. Score.
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 18,
-                  lineHeight: 1.65,
-                  color: COLORS.textMuted,
-                  mb: "36px",
-                  maxWidth: 430,
-                }}
-              >
-                Real-time multimodal AI conducting structured interviews fully
-                inside your platform — no bias, no guesswork.
-              </Typography>
-              <Box sx={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                <GradientButton size="lg" to="/login">
-                  Start Free Interview
-                </GradientButton>
-                <GradientButton
-                  variant="ghost"
-                  size="lg"
-                  to="/demo"
-                  startIcon={
-                    <Box
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: "50%",
-                        background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="play" size={10} color="white" />
-                    </Box>
-                  }
-                >
-                  Watch Demo
-                </GradientButton>
-              </Box>
-            </Box>
-            {/* Hero collage */}
-            <Box
-              className="fade-up-1"
-              sx={{ position: "relative", height: 460 }}
-            >
-              <SoftCard
-                sx={{
-                  position: "absolute",
-                  top: 20,
-                  left: 0,
-                  right: 0,
-                  overflow: "hidden",
-                  p: 0,
-                }}
-              >
-                <Box
-                  sx={{
-                    background: "linear-gradient(135deg,#0F1115,#161A22)",
-                    p: "14px 20px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Box sx={{ display: "flex", gap: "5px" }}>
-                    {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => (
-                      <Box
-                        key={c}
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          background: c,
-                        }}
-                      />
-                    ))}
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      px: "10px",
-                      py: "4px",
-                      borderRadius: "20px",
-                      background: "rgba(91,93,246,0.12)",
-                      color: COLORS.indigo,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      fontFamily: "'DM Mono',monospace",
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: COLORS.indigo,
-                      }}
-                    />{" "}
-                    Speaking
-                  </Box>
-                </Box>
-                <Box sx={{ background: "#0F1115", p: "28px 24px" }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: "18px",
-                    }}
-                  >
-                    <Box
-                      className="speaking-avatar"
-                      sx={{
-                        width: 76,
-                        height: 76,
-                        borderRadius: "50%",
-                        background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="brain" size={34} color="white" />
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: "3px",
-                        alignItems: "flex-end",
-                        height: 36,
-                      }}
-                    >
-                      {Array.from({ length: 14 }).map((_, i) => (
-                        <Box
-                          key={i}
-                          className="waveform-bar"
-                          sx={{
-                            animationDelay: `${i * 0.07}s`,
-                            animationDuration: `${0.6 + (i % 3) * 0.2}s`,
-                          }}
-                        />
-                      ))}
-                    </Box>
-                    <Box
-                      sx={{
-                        background: "rgba(255,255,255,0.05)",
-                        borderRadius: "12px",
-                        p: "10px 16px",
-                        width: "100%",
-                        fontSize: 13,
-                        color: "rgba(255,255,255,0.65)",
-                        lineHeight: 1.55,
-                        fontStyle: "italic",
-                        fontFamily: "'DM Mono',monospace",
-                      }}
-                    >
-                      "Tell me about a time you led a cross-functional team
-                      through a challenging project..."
-                    </Box>
-                  </Box>
-                </Box>
-              </SoftCard>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
+    <Box sx={{ bgcolor: "#F8F9FC", minHeight: "100vh" }}>
 
-      {/* PROBLEM */}
-      <Box
-        component="section"
-        sx={{ py: "72px", px: "48px", maxWidth: 1140, mx: "auto" }}
-      >
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "1.2fr 1fr",
-            gap: "56px",
-            alignItems: "start",
-          }}
-        >
-          <Box>
-            <SectionLabel>The Problem</SectionLabel>
-            <Typography
-              variant="h2"
-              sx={{ fontSize: "clamp(30px,3.2vw,46px)", mb: "18px" }}
-            >
-              Hiring is broken.
-              <br />
-              <Box
-                component="span"
-                sx={{ color: COLORS.textLight, fontWeight: 400 }}
-              >
-                We're fixing it.
-              </Box>
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 16,
-                lineHeight: 1.7,
-                color: COLORS.textMuted,
-                maxWidth: 420,
-              }}
-            >
-              Traditional interviews fail both sides — riddled with bias,
-              inconsistency, and wasted time.
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "11px" }}>
-            {[
-              {
-                icon: "shield",
-                label: "Interviewer Bias",
-                desc: "Interviewers unconsciously favor candidates similar to themselves.",
-                color: COLORS.red,
-              },
-              {
-                icon: "chart",
-                label: "Inconsistent Scoring",
-                desc: "No two interviews are evaluated the same way.",
-                color: COLORS.amber,
-              },
-              {
-                icon: "zap",
-                label: "Fragmented Tools",
-                desc: "Teams juggle Zoom, spreadsheets, and email — data gets lost.",
-                color: COLORS.purple,
-              },
-              {
-                icon: "clock",
-                label: "High Screening Cost",
-                desc: "Senior engineers spend hours on calls AI could handle instantly.",
-                color: COLORS.blue,
-              },
-            ].map((item, i) => (
-              <SoftCard
-                key={i}
-                sx={{
-                  p: "16px 20px",
-                  display: "flex",
-                  gap: "14px",
-                  alignItems: "flex-start",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "10px",
-                    background: alpha(item.color, 0.08),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Icon name={item.icon} size={16} color={item.color} />
-                </Box>
-                <Box>
-                  <Typography sx={{ fontWeight: 600, fontSize: 14, mb: "3px" }}>
-                    {item.label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      color: COLORS.textMuted,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {item.desc}
-                  </Typography>
-                </Box>
-              </SoftCard>
-            ))}
-          </Box>
-        </Box>
-      </Box>
 
-      {/* HOW IT WORKS */}
-      <Box
-        id="features"
-        component="section"
-        sx={{
-          py: "56px",
-          px: "48px",
-          background: alpha(COLORS.indigo, 0.025),
-          borderTop: `1px solid ${alpha(COLORS.indigo, 0.06)}`,
-          borderBottom: `1px solid ${alpha(COLORS.indigo, 0.06)}`,
-        }}
-      >
-        <Box sx={{ maxWidth: 1140, mx: "auto" }}>
-          <Box sx={{ textAlign: "center", mb: "46px" }}>
-            <SectionLabel>How It Works</SectionLabel>
-            <Typography
-              variant="h2"
-              sx={{ fontSize: "clamp(26px,2.8vw,40px)" }}
-            >
-              Three steps to smarter hiring
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1.55fr 1fr",
-              gap: "14px",
-            }}
-          >
-            <SoftCard
-              dark
-              sx={{ p: "38px 40px", color: "white", cursor: "default" }}
-            >
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: COLORS.lavender,
-                  letterSpacing: "0.1em",
-                  mb: "14px",
-                }}
-              >
-                STEP 01
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{ fontSize: 24, color: "white", mb: "12px" }}
-              >
-                Set Up Your Interview
-              </Typography>
-              <Typography
-                sx={{
-                  fontSize: 15,
-                  lineHeight: 1.7,
-                  color: "rgba(255,255,255,0.5)",
-                  mb: "26px",
-                }}
-              >
-                Choose your role, define required skills, and let AI generate a
-                structured question set. Ready in 2 minutes.
-              </Typography>
-              <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                {[
-                  "Custom Questions",
-                  "Auto-Generated",
-                  "Skill-Based",
-                  "Manual Mode",
-                ].map((t) => (
-                  <Box
-                    key={t}
-                    sx={{
-                      background: "rgba(91,93,246,0.22)",
-                      border: "1px solid rgba(91,93,246,0.32)",
-                      borderRadius: "20px",
-                      px: "12px",
-                      py: "4px",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: COLORS.lavender,
-                    }}
-                  >
-                    {t}
-                  </Box>
-                ))}
+
+      {/* Hero */}
+      <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 3, md: 6 }, pt: { xs: 5, md: 15 }, pb: { xs: 8, md: 14 } }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Left */}
+          <Box sx={{ flex: "1 1 460px", maxWidth: 560 }}>
+
+            <Typography variant="h1" sx={{ mb: 2.5, fontSize: { xs: "2.5rem", md: "3.75rem" } }}>
+              AI Interviews That{" "}
+              <Box component="span" sx={{
+                background: `linear-gradient(135deg,${COLORS.indigo} 0%,${COLORS.lavender} 100%)`,
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>
+                Think. Listen. Score.
               </Box>
-            </SoftCard>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            </Typography>
+            <Typography variant="body1" sx={{ color: "#5A5E72", mb: 4, fontSize: "1.125rem", maxWidth: 440 }}>
+              Real-time multimodal AI conducting structured interviews fully inside your platform — no bias, no guesswork.
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+              <GradientButton size="lg" to="/login">
+                Start Free Interview <ArrowForward sx={{ ml: 1, fontSize: 20 }} />
+              </GradientButton>
+              <Button variant="outlined" size="large" onClick={() => navigate("/demo")} startIcon={
+                <Box sx={{
+                  width: 24, height: 24, borderRadius: "50%",
+                  background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <PlayArrow sx={{ fontSize: 12, color: "#fff" }} />
+                </Box>
+              }>
+                Watch Demo
+              </Button>
+            </Box>
+            <Box sx={{ display: "flex", gap: 4, mt: 5 }}>
               {[
-                {
-                  step: "02",
-                  title: "AI Conducts the Interview",
-                  desc: "The AI speaks, listens, and evaluates in real-time.",
-                  icon: "brain",
-                  color: COLORS.indigo,
-                },
-                {
-                  step: "03",
-                  title: "Get Structured Reports",
-                  desc: "Receive per-question scores, strengths, and analytics.",
-                  icon: "chart",
-                  color: COLORS.green,
-                },
-              ].map((c) => (
-                <SoftCard key={c.step} sx={{ p: "24px 26px", flex: 1 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      mb: "10px",
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: COLORS.textLight,
-                        letterSpacing: "0.1em",
-                      }}
-                    >
-                      STEP {c.step}
-                    </Typography>
-                    <Box
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: "10px",
-                        background: alpha(c.color, 0.1),
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name={c.icon} size={16} color={c.color} />
-                    </Box>
+                { n: "10k+", label: "Interviews done" },
+                { n: "94%", label: "Accuracy rate" },
+                { n: "3x", label: "Faster hiring" },
+              ].map((s) => (
+                <Box key={s.label}>
+                  <Typography sx={{ fontSize: "1.5rem", fontWeight: 800, color: "#0F1115" }}>{s.n}</Typography>
+                  <Typography variant="caption" sx={{ color: "#8B8FA8" }}>{s.label}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Right */}
+          <Box sx={{ flex: "1 1 380px", display: "flex", justifyContent: "center", position: "relative", mt: { xs: 4, md: 0 } }}>
+            <Box sx={{
+              position: "absolute", width: 400, height: 400, borderRadius: "50%",
+              background: `radial-gradient(circle,${alpha(COLORS.indigo, 0.12)} 0%,transparent 70%)`,
+              top: "50%", left: "50%", transform: "translate(-50%,-50%)",
+            }} />
+            <HeroMockup />
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Problem Section */}
+      <Box sx={{ bgcolor: "#FFFFFF", py: { xs: 8, md: 12 }, borderTop: `1px solid ${alpha(COLORS.indigo, 0.07)}` }}>
+        <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 3, md: 6 } }}>
+          <Box sx={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
+            <Box sx={{ flex: "1 1 360px", maxWidth: 440 }}>
+              <Typography variant="overline" sx={{ color: COLORS.indigo, mb: 2, display: "block" }}>The Problem</Typography>
+              <Typography variant="h2" sx={{ mb: 2.5, fontSize: { xs: "2rem", md: "2.5rem" } }}>
+                Hiring is broken.{" "}
+                <Box component="span" sx={{ color: COLORS.textLight, fontWeight: 400 }}>We're fixing it.</Box>
+              </Typography>
+              <Typography sx={{ color: "#5A5E72", lineHeight: 1.8, fontSize: "1rem" }}>
+                Traditional interviews fail both sides — riddled with bias, inconsistency, and wasted time. The average company spends 42 days and $4,700 per hire — most of it on inefficient manual processes that could be automated.
+              </Typography>
+            </Box>
+            <Box sx={{ flex: "1 1 400px", display: "flex", flexDirection: "column", gap: 2 }}>
+              {problems.map((p, i) => (
+                <SoftCard key={i} sx={{ display: "flex", alignItems: "flex-start", gap: 2, p: 2, borderRadius: 2 }}>
+                  <Box sx={{
+                    width: 40, height: 40, borderRadius: 1.5, flexShrink: 0,
+                    bgcolor: alpha(p.color, 0.08),
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <Icon name={p.icon} size={16} color={p.color} />
                   </Box>
-                  <Typography variant="h6" sx={{ fontSize: 16, mb: "7px" }}>
-                    {c.title}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      lineHeight: 1.6,
-                      color: COLORS.textMuted,
-                    }}
-                  >
-                    {c.desc}
-                  </Typography>
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: "0.9375rem", mb: 0.5 }}>{p.label}</Typography>
+                    <Typography variant="body2" sx={{ color: "#5A5E72" }}>{p.desc}</Typography>
+                  </Box>
                 </SoftCard>
               ))}
             </Box>
@@ -527,174 +254,196 @@ const Landing: React.FC = () => {
         </Box>
       </Box>
 
-      {/* FEATURES BENTO */}
-      <Box
-        component="section"
-        sx={{ py: "72px", px: "48px", maxWidth: 1140, mx: "auto" }}
-      >
-        <Box sx={{ textAlign: "center", mb: "48px" }}>
-          <SectionLabel>Features</SectionLabel>
-          <Typography variant="h2" sx={{ fontSize: "clamp(26px,2.8vw,40px)" }}>
-            Everything you need, nothing you don't
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: "14px",
-          }}
-        >
-          {[
-            {
-              icon: "mic",
-              title: "Real-Time Voice AI",
-              desc: "Sub-2s AI responses with natural conversational flow.",
-              wide: true,
-              color: COLORS.indigo,
-            },
-            {
-              icon: "chart",
-              title: "Deep Analytics",
-              desc: "Per-question scoring, clarity, and benchmarks.",
-              color: COLORS.purple,
-            },
-            {
-              icon: "shield",
-              title: "Bias-Free Evaluation",
-              desc: "Standardized rubrics applied identically, every time.",
-              color: COLORS.pink,
-            },
-            {
-              icon: "zap",
-              title: "Instant Transcription",
-              desc: "Accurate speech-to-text with real-time processing.",
-              color: COLORS.amber,
-            },
-            {
-              icon: "users",
-              title: "Team Collaboration",
-              desc: "Share reports and make hiring decisions together.",
-              color: COLORS.green,
-            },
-          ].map((f, i) => (
-            <SoftCard
-              key={i}
-              sx={{
-                p: "26px 28px",
-                gridColumn: f.wide ? "1/span 2" : "auto",
-                display: "flex",
-                flexDirection: f.wide ? "row" : "column",
-                gap: f.wide ? "22px" : "12px",
-                alignItems: f.wide ? "center" : "flex-start",
-                "&:hover": {
-                  borderColor: alpha(f.color, 0.16),
-                  boxShadow: `0 12px 40px ${alpha(f.color, 0.08)}`,
+      {/* How it Works */}
+      <Box sx={{ py: { xs: 8, md: 12 } }}>
+        <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 3, md: 6 } }}>
+          <Box sx={{ textAlign: "center", mb: 8 }}>
+            <Typography variant="overline" sx={{ color: COLORS.indigo, mb: 2, display: "block" }}>How It Works</Typography>
+            <Typography variant="h2" sx={{ fontSize: { xs: "1.875rem", md: "2.5rem" } }}>
+              Three steps to smarter hiring
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+            {/* Step 01 */}
+            <Box sx={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 2 }}>
+              <SoftCard sx={{
+                p: 4,
+                background: "linear-gradient(135deg,#0F1115 0%,#161A22 60%,#1a1d2e 100%)",
+                borderColor: "transparent", color: "white",
+              }}>
+                <Typography sx={{
+                  fontSize: 12, fontWeight: 700, color: COLORS.lavender,
+                  letterSpacing: "0.1em", mb: "14px",
+                }}>
+                  STEP 01
+                </Typography>
+                <Typography variant="h4" sx={{ color: "#fff", mb: 1.5 }}>Set Up Your Interview</Typography>
+                <Typography sx={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.7, mb: 3 }}>
+                  Choose your role, define required skills, and let AI generate a structured question set. Ready in 2 minutes.
+                </Typography>
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3 }}>
+                  {["Custom Questions", "Auto-Generated", "Skill-Based", "Manual Mode"].map((t) => (
+                    <Box key={t} sx={{
+                      background: "rgba(91,93,246,0.22)",
+                      border: "1px solid rgba(91,93,246,0.32)",
+                      borderRadius: "20px", px: "12px", py: "4px",
+                      fontSize: 12, fontWeight: 600, color: COLORS.lavender,
+                    }}>
+                      {t}
+                    </Box>
+                  ))}
+                </Box>
+                <Typography sx={{ color: "rgba(255,255,255,0.45)", fontSize: "0.7rem", mb: 1 }}>
+                  Share with applicants:
+                </Typography>
+                <Box sx={{
+                  px: 1.5, py: 1, borderRadius: 1.5,
+                  bgcolor: alpha(COLORS.indigo, 0.15),
+                  border: `1px solid ${alpha(COLORS.indigo, 0.3)}`,
+                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1,
+                }}>
+                  <Typography sx={{
+                    color: "white", fontSize: "0.75rem", fontWeight: 600, fontFamily: "monospace",
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>
+                    intervuew.ai/apply/stripe-sr-eng-001
+                  </Typography>
+                  <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+                    <IconButton size="small" sx={{ color: COLORS.lavender, p: 0.5 }}>
+                      <ContentCopy sx={{ fontSize: 14 }} />
+                    </IconButton>
+                    <IconButton size="small" sx={{ color: COLORS.lavender, p: 0.5 }}>
+                      <OpenInNew sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </SoftCard>
+            </Box>
+
+            {/* Steps 02 & 03 */}
+            <Box sx={{ flex: "1 1 240px", display: "flex", flexDirection: "column", gap: 3 }}>
+              {[
+                {
+                  step: "02", title: "AI Conducts the Interview",
+                  desc: "The AI speaks, listens, and evaluates in real-time — structured, consistent, every candidate.",
+                  icon: "brain", color: COLORS.indigo,
                 },
-              }}
-            >
-              <Box
+                {
+                  step: "03", title: "Get Structured Reports",
+                  desc: "Receive per-question scores, strengths, weaknesses, and side-by-side candidate analytics.",
+                  icon: "chart", color: COLORS.green,
+                },
+              ].map((step) => (
+                <SoftCard key={step.step} sx={{ flex: 1, p: 3 }}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: "10px" }}>
+                    <Typography sx={{
+                      fontSize: 12, fontWeight: 700, color: COLORS.textLight, letterSpacing: "0.1em",
+                    }}>
+                      STEP {step.step}
+                    </Typography>
+                    <Box sx={{
+                      width: 34, height: 34, borderRadius: "10px",
+                      background: alpha(step.color, 0.1),
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <Icon name={step.icon} size={16} color={step.color} />
+                    </Box>
+                  </Box>
+                  <Typography variant="h5" sx={{ mb: 1 }}>{step.title}</Typography>
+                  <Typography variant="body2" sx={{ color: "#5A5E72", lineHeight: 1.7 }}>{step.desc}</Typography>
+                </SoftCard>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Feature Grid */}
+      <Box sx={{ bgcolor: "#FFFFFF", py: { xs: 8, md: 12 }, borderTop: `1px solid ${alpha(COLORS.indigo, 0.07)}` }}>
+        <Box sx={{ maxWidth: 1280, mx: "auto", px: { xs: 3, md: 6 } }}>
+          <Box sx={{ textAlign: "center", mb: 8 }}>
+            <Typography variant="overline" sx={{ color: COLORS.indigo, mb: 2, display: "block" }}>Features</Typography>
+            <Typography variant="h2" sx={{ fontSize: { xs: "1.875rem", md: "2.5rem" } }}>
+              Everything you need, nothing you don't
+            </Typography>
+          </Box>
+          <Box sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 2.5,
+          }}>
+            {features.map((f, i) => (
+              <SoftCard
+                key={i}
                 sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "13px",
-                  background: alpha(f.color, 0.1),
+                  gridColumn: f.wide ? "1 / span 2" : "auto",
+                  p: 3,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
+                  flexDirection: f.wide ? "row" : "column",
+                  gap: f.wide ? "22px" : "12px",
+                  alignItems: f.wide ? "center" : "flex-start",
+                  cursor: "default",
+                  transform: hoveredFeature === i ? "translateY(-4px)" : "none",
+                  "&:hover": {
+                    borderColor: alpha(f.color, 0.16),
+                    boxShadow: `0 12px 40px ${alpha(f.color, 0.08)}`,
+                  },
                 }}
+                onClick={() => setHoveredFeature(i === hoveredFeature ? null : i)}
               >
-                <Icon name={f.icon} size={20} color={f.color} />
-              </Box>
-              <Box>
-                <Typography
-                  variant="h6"
-                  sx={{ fontSize: f.wide ? 19 : 15, mb: "6px" }}
-                >
-                  {f.title}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    color: COLORS.textMuted,
-                  }}
-                >
-                  {f.desc}
-                </Typography>
-              </Box>
-            </SoftCard>
-          ))}
+                <Box sx={{
+                  width: 44, height: 44, borderRadius: 2, flexShrink: 0,
+                  bgcolor: alpha(f.color, 0.1),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Icon name={f.icon} size={20} color={f.color} />
+                </Box>
+                <Box>
+                  <Typography variant="h6" sx={{ mb: 1, fontSize: f.wide ? 19 : 15 }}>{f.title}</Typography>
+                  <Typography variant="body2" sx={{ color: "#5A5E72", lineHeight: 1.7 }}>{f.desc}</Typography>
+                </Box>
+              </SoftCard>
+            ))}
+          </Box>
         </Box>
       </Box>
 
       {/* CTA */}
-      <Box
-        component="section"
-        sx={{
-          mx: "48px",
-          mb: "64px",
-          borderRadius: "28px",
-          background:
-            "linear-gradient(135deg,#0F1115 0%,#161A22 60%,#1a1d2e 100%)",
-          p: "60px 48px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <Box
-          sx={{
-            position: "absolute",
-            top: -80,
-            right: -80,
-            width: 400,
-            height: 400,
-            borderRadius: "50%",
-            background:
-              "radial-gradient(circle,rgba(91,93,246,0.3) 0%,transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
-        <Box sx={{ textAlign: "center", position: "relative" }}>
-          <Typography
-            variant="h2"
-            sx={{
-              fontSize: "clamp(30px,4vw,50px)",
-              color: "white",
-              mb: "14px",
-            }}
-          >
+      <Box sx={{
+        mx: { xs: 3, md: 6 }, mb: 8, borderRadius: "28px",
+        background: "linear-gradient(135deg,#0F1115 0%,#161A22 60%,#1a1d2e 100%)",
+        p: { xs: "48px 24px", md: "60px 48px" },
+        position: "relative", overflow: "hidden",
+      }}>
+        <Box sx={{
+          position: "absolute", top: -80, right: -80, width: 400, height: 400,
+          borderRadius: "50%",
+          background: `radial-gradient(circle,${alpha(COLORS.indigo, 0.3)} 0%,transparent 70%)`,
+          pointerEvents: "none",
+        }} />
+        <Box sx={{ position: "relative", textAlign: "center", maxWidth: 600, mx: "auto" }}>
+          <Typography variant="h2" sx={{ color: "#fff", mb: 2, fontSize: { xs: "2rem", md: "2.75rem" } }}>
             Ready to interview smarter?
           </Typography>
-          <Typography
-            sx={{
-              fontSize: 16,
-              color: "rgba(255,255,255,0.45)",
-              mb: "34px",
-              maxWidth: 380,
-              mx: "auto",
-            }}
-          >
-            Join 500+ companies using Intervuew to find better talent, faster.
+          <Typography sx={{ color: "rgba(255,255,255,0.45)", mb: 5, fontSize: "1.125rem", maxWidth: 380, mx: "auto" }}>
+            Join 500+ companies using Intervuew to find better talent, faster and more consistently.
           </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              gap: "12px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
-          >
+          <Box sx={{ display: "flex", gap: 2, justifyContent: "center", flexWrap: "wrap" }}>
             <GradientButton size="lg" to="/login">
               Start free — no card needed
             </GradientButton>
-            <GradientButton variant="dark" size="lg" to="/demo">
-              Book a demo
-            </GradientButton>
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<PlayArrow />}
+              sx={{ borderColor: "rgba(255,255,255,0.4)", color: "#fff", "&:hover": { borderColor: "#fff", bgcolor: "rgba(255,255,255,0.1)" } }}
+            >
+              Book a Demo
+            </Button>
           </Box>
         </Box>
       </Box>
+
     </Box>
   );
 };
