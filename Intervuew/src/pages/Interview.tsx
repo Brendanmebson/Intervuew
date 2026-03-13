@@ -14,6 +14,7 @@ import {
   TranscriptEntry,
 } from "../types";
 import { esbuildVersion } from "vite";
+import api from "../api/api";
 
 const Interview: React.FC = () => {
   const nav = useNavigate();
@@ -45,6 +46,21 @@ const Interview: React.FC = () => {
   const [startVideoRequested, setStartVideoRequested] = useState(false);
   const lastSentRef = useRef<number>(0);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const response = await api.get("/User/me");
+        setUserId(response.data);
+      } catch (err) {
+        // cookie invalid or expired, redirect to login
+        nav("/login");
+      }
+    };
+    fetchMe();
+  }, []);
+
   const playPCM = (float32: Float32Array) => {
     if (!audioContextRef.current) return;
 

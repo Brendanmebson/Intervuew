@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
 import { SoftCard, GradientButton } from "../components/shared";
 import { COLORS } from "../theme/theme";
-import { InterviewDict } from "@/types";
+import { InterviewRequest } from "@/types";
+import { CircularProgress } from "@mui/material";
+import api from "../api/api";
+import Cookies from "js-cookie";
 
 const Field: React.FC<{
   label: string;
@@ -14,8 +17,19 @@ const Field: React.FC<{
   placeholder?: string;
   multiline?: boolean;
   rows?: number;
-}> = ({ label, value, onChange, placeholder, multiline, rows = 4 }) => (
-  <Box>
+  type?: string;
+  width?: string | number;
+}> = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  multiline,
+  rows = 4,
+  type = "text",
+  width = "100%",
+}) => (
+  <Box sx={{ width }}>
     <Typography
       sx={{ fontSize: 12, fontWeight: 600, color: COLORS.textMuted, mb: "6px" }}
     >
@@ -29,7 +43,7 @@ const Field: React.FC<{
         placeholder={placeholder}
         rows={rows}
         sx={{
-          width: "100%",
+          width: "200%",
           border: "1px solid rgba(0,0,0,0.1)",
           borderRadius: "12px",
           padding: "10px 14px",
@@ -38,13 +52,14 @@ const Field: React.FC<{
           background: COLORS.bg,
           color: COLORS.text,
           outline: "none",
-          resize: "vertical",
+          resize: "none",
           "&:focus": { borderColor: COLORS.indigo, background: COLORS.white },
         }}
       />
     ) : (
       <Box
         component="input"
+        type={type}
         value={value}
         onChange={(e: any) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -58,6 +73,7 @@ const Field: React.FC<{
           background: COLORS.bg,
           color: COLORS.text,
           outline: "none",
+          resize: "none",
           "&:focus": { borderColor: COLORS.indigo, background: COLORS.white },
         }}
       />
@@ -66,51 +82,215 @@ const Field: React.FC<{
 );
 
 const OrgCreateRole: React.FC = () => {
-  const [interview, setInterview] = useState<InterviewDict | {}>({});
+  const [status, setStatus] = useState<
+    "loading" | "error" | "normal" | "success"
+  >("normal");
 
-  const createInterview = async () => {};
+  const orgId = Cookies.get("org_id");
+
+  const [interview, setInterview] = useState<InterviewRequest>({
+    role: "",
+    description: "",
+    organization_id: "",
+    start_date: "",
+    end_date: "",
+    duration: 10,
+    job_requirements: {
+      role: "",
+      languages: [],
+      domains: [],
+      softskills: [],
+    },
+  });
+
   const nav = useNavigate();
-  const [title, setTitle] = useState("");
-  const [dept, setDept] = useState("");
-  const [location, setLocation] = useState("");
-  const [type, setType] = useState<"Full-time" | "Contract" | "Part-time">(
-    "Full-time",
-  );
-  const [description, setDesc] = useState("");
-  const [skillInput, setSkillInput] = useState("");
-  const [skills, setSkills] = useState<string[]>([]);
-  const [mode, setMode] = useState<"Auto" | "Manual">("Auto");
-  const [questions, setQuestions] = useState("5");
+
+  const [langInput, setLangInput] = useState({ key: "", value: 0 });
+
+  const [domainInput, setDomainInput] = useState({ key: "", value: 0 });
+
+  const [softskillInput, setSoftskillInput] = useState("");
+
   const [saved, setSaved] = useState(false);
 
-  const addSkill = () => {
-    const s = skillInput.trim();
-    if (s && !skills.includes(s)) setSkills((prev) => [...prev, s]);
-    setSkillInput("");
+  // Add Language
+  const handleAddLanguage = () => {
+    if (!langInput.key) return;
+
+    const languageExists = interview.job_requirements.languages.some(
+      (lang) => langInput.key in lang,
+    );
+
+    if (languageExists) {
+      alert("Language already added!");
+      return;
+    }
+
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        languages: [
+          ...interview.job_requirements.languages,
+          { [langInput.key]: langInput.value },
+        ],
+      },
+    });
+
+    setLangInput({ key: "", value: 0 });
   };
 
-  const handleCreate = () => {
-    setSaved(true);
-    setTimeout(() => nav("/org/roles"), 1200);
+  // Add Domain
+  const handleAddDomain = () => {
+    if (!domainInput.key) return;
+
+    const domainExists = interview.job_requirements.domains.some(
+      (domain) => domainInput.key in domain,
+    );
+
+    if (domainExists) {
+      alert("Domain already added!");
+      return;
+    }
+
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        domains: [
+          ...interview.job_requirements.domains,
+          { [domainInput.key]: domainInput.value },
+        ],
+      },
+    });
+
+    setDomainInput({ key: "", value: 0 });
+  };
+
+  // Add Softskill
+  const handleAddSoftskill = () => {
+    const skill = softskillInput.trim();
+    if (!skill) return;
+
+    if (interview.job_requirements.softskills.includes(skill)) {
+      alert("Softskill already added!");
+      return;
+    }
+
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        softskills: [...interview.job_requirements.softskills, skill],
+      },
+    });
+
+    setSoftskillInput("");
+  };
+
+  // Remove Language
+  const handleRemoveLanguage = (key: string) => {
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        languages: interview.job_requirements.languages.filter(
+          (lang) => !(key in lang),
+        ),
+      },
+    });
+  };
+
+  // Remove Domain
+  const handleRemoveDomain = (key: string) => {
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        domains: interview.job_requirements.domains.filter(
+          (domain) => !(key in domain),
+        ),
+      },
+    });
+  };
+
+  // Remove Softskill
+  const handleRemoveSoftskill = (skill: string) => {
+    setInterview({
+      ...interview,
+      job_requirements: {
+        ...interview.job_requirements,
+        softskills: interview.job_requirements.softskills.filter(
+          (s) => s !== skill,
+        ),
+      },
+    });
+  };
+
+  const createInterview = async () => {
+    try {
+      if (!interview.role || !interview.start_date || !interview.end_date) {
+        alert("Please fill in all required fields");
+        return;
+      }
+
+      if (
+        !interview.duration ||
+        interview.duration < 10 ||
+        interview.duration > 40
+      ) {
+        alert("Duration must be between 10 and 40 minutes");
+        return;
+      }
+
+      setStatus("loading");
+
+      const request = {
+        ...interview,
+        organization_id: orgId,
+      };
+
+      console.log("Sending request:", JSON.stringify(request, null, 2));
+
+      const response = await api.post(
+        "http://localhost:8000/Interview/create",
+        request,
+      );
+
+      const data = await response.data;
+      console.log("Response:", data);
+
+      console.log("Interview created successfully:", data);
+      setStatus("success");
+
+      setTimeout(() => {
+        nav(`/org/interview/${orgId}`);
+      }, 1200);
+    } catch (error) {
+      console.error("Error creating interview:", error);
+      setStatus("error");
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create interview";
+      alert(errorMessage);
+
+      setTimeout(() => setStatus("normal"), 3000);
+    }
   };
 
   return (
     <SidebarLayout
       userLabel="Acme Corp"
-      userSub="Business plan"
       userInitial="A"
       navItems={[
-        { icon: "home", label: "Overview", to: "/org" },
+        { icon: "home", label: "Overview", active: true, to: `/org` },
         {
           icon: "briefcase",
           label: "Job Roles",
-          active: true,
-          to: "/org/roles",
+          to: `/org/interview`,
         },
-        { icon: "users", label: "Candidates", to: "/org/candidates" },
-        { icon: "mic", label: "Interviews", to: "/org/interviews" },
-        { icon: "chart", label: "Analytics", to: "/org/analytics" },
-        { icon: "settings", label: "Settings", to: "/org/settings" },
+        { icon: "users", label: "Candidates", to: `/org/applicants` },
+        { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
     >
       <Box className="fade-up" sx={{ mb: "28px" }}>
@@ -135,7 +315,7 @@ const OrgCreateRole: React.FC = () => {
           ← Back to Roles
         </Box>
         <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
-          Create Job Role
+          Create An Interview
         </Typography>
         <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
           Set up the role and AI will generate tailored interview questions.
@@ -159,8 +339,17 @@ const OrgCreateRole: React.FC = () => {
             <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <Field
                 label="Job Title"
-                value={title}
-                onChange={setTitle}
+                value={interview.role}
+                onChange={(v: string) => {
+                  setInterview((prev) => ({
+                    ...prev,
+                    role: v,
+                    job_requirements: {
+                      ...prev.job_requirements,
+                      role: v,
+                    },
+                  }));
+                }}
                 placeholder="e.g. Senior Product Manager"
               />
               <Box
@@ -171,32 +360,74 @@ const OrgCreateRole: React.FC = () => {
                 }}
               >
                 <Field
-                  label="Department"
-                  value={dept}
-                  onChange={setDept}
-                  placeholder="e.g. Product"
+                  label="Start Date"
+                  value={interview.start_date}
+                  onChange={(v: string) =>
+                    setInterview({ ...interview, start_date: v })
+                  }
+                  type="datetime-local"
                 />
                 <Field
-                  label="Location"
-                  value={location}
-                  onChange={setLocation}
-                  placeholder="e.g. Remote"
+                  label="End Date"
+                  value={interview.end_date}
+                  onChange={(v: string) =>
+                    setInterview({ ...interview, end_date: v })
+                  }
+                  type="datetime-local"
+                />
+
+                <Field
+                  label="Description"
+                  value={interview.description}
+                  onChange={(v: string) =>
+                    setInterview({ ...interview, description: v })
+                  }
+                  placeholder="Enter Job description"
+                  multiline
+                  rows={4}
                 />
               </Box>
             </Box>
+            <Box sx={{ mb: 2 }}>
+              <input
+                type="number"
+                placeholder="enter duration in minutes( 10 to 40 minutes)"
+                min={10}
+                max={40}
+                style={{
+                  width: "350px",
+                  outline: "none",
+                  padding: "10px 20px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  fontFamily: "'DM Sans',sans-serif",
+                  background: COLORS.bg,
+                  color: COLORS.text,
+                }}
+                value={interview.duration}
+                onChange={(e) =>
+                  setInterview({
+                    ...interview,
+                    duration: Number(e.target.value),
+                  })
+                }
+              />
+            </Box>
           </SoftCard>
 
+          {/* Languages */}
           <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
-              Languages and Frameworks
+              Languages and Frameworks (with Experience)
             </Typography>
             <Box sx={{ display: "flex", gap: "8px", mb: "12px" }}>
               <Box
                 component="input"
-                value={skillInput}
-                onChange={(e: any) => setSkillInput(e.target.value)}
-                onKeyDown={(e: any) => e.key === "Enter" && addSkill()}
-                placeholder="Type a skill and press Enter..."
+                value={langInput.key}
+                onChange={(e: any) =>
+                  setLangInput({ ...langInput, key: e.target.value })
+                }
+                placeholder="e.g. Python"
                 sx={{
                   flex: 1,
                   border: "1px solid rgba(0,0,0,0.1)",
@@ -210,62 +441,87 @@ const OrgCreateRole: React.FC = () => {
                   "&:focus": { borderColor: COLORS.indigo },
                 }}
               />
-              <GradientButton size="sm" onClick={addSkill}>
+              <Box
+                component="input"
+                type="number"
+                value={langInput.value || ""}
+                onChange={(e: any) =>
+                  setLangInput({ ...langInput, value: Number(e.target.value) })
+                }
+                placeholder="Years"
+                sx={{
+                  width: "100px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  fontFamily: "'DM Sans',sans-serif",
+                  background: COLORS.bg,
+                  color: COLORS.text,
+                  outline: "none",
+                  "&:focus": { borderColor: COLORS.indigo },
+                }}
+              />
+              <GradientButton size="sm" onClick={handleAddLanguage}>
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {skills.map((s) => (
-                <Box
-                  key={s}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: alpha(COLORS.indigo, 0.08),
-                    color: COLORS.indigo,
-                    borderRadius: "20px",
-                    px: "12px",
-                    py: "5px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  {s}
+            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+              {interview.job_requirements.languages.map((lang) => {
+                const [key, value] = Object.entries(lang)[0];
+                return (
                   <Box
-                    onClick={() =>
-                      setSkills((prev) => prev.filter((x) => x !== s))
-                    }
+                    key={key}
                     sx={{
-                      cursor: "pointer",
-                      opacity: 0.6,
-                      "&:hover": { opacity: 1 },
-                      fontSize: 16,
-                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: alpha(COLORS.indigo, 0.08),
+                      color: COLORS.indigo,
+                      borderRadius: "20px",
+                      px: "12px",
+                      py: "5px",
+                      fontSize: 13,
+                      fontWeight: 600,
                     }}
                   >
-                    ×
+                    {key} | {value} yrs
+                    <Box
+                      onClick={() => handleRemoveLanguage(key)}
+                      sx={{
+                        cursor: "pointer",
+                        opacity: 0.6,
+                        "&:hover": { opacity: 1 },
+                        fontSize: 16,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </Box>
                   </Box>
-                </Box>
-              ))}
-              {skills.length === 0 && (
+                );
+              })}
+              {interview.job_requirements.languages.length === 0 && (
                 <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No skills added yet.
+                  No languages added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
+
+          {/* Domains */}
           <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
-              Domains
+              Domains (with Experience)
             </Typography>
             <Box sx={{ display: "flex", gap: "8px", mb: "12px" }}>
               <Box
                 component="input"
-                value={skillInput}
-                onChange={(e: any) => setSkillInput(e.target.value)}
-                onKeyDown={(e: any) => e.key === "Enter" && addSkill()}
-                placeholder="Type a skill and press Enter..."
+                value={domainInput.key}
+                onChange={(e: any) =>
+                  setDomainInput({ ...domainInput, key: e.target.value })
+                }
+                placeholder="e.g. Machine Learning"
                 sx={{
                   flex: 1,
                   border: "1px solid rgba(0,0,0,0.1)",
@@ -279,51 +535,78 @@ const OrgCreateRole: React.FC = () => {
                   "&:focus": { borderColor: COLORS.indigo },
                 }}
               />
-              <GradientButton size="sm" onClick={addSkill}>
+              <Box
+                component="input"
+                type="number"
+                value={domainInput.value || ""}
+                onChange={(e: any) =>
+                  setDomainInput({
+                    ...domainInput,
+                    value: Number(e.target.value),
+                  })
+                }
+                placeholder="Years"
+                sx={{
+                  width: "100px",
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  fontFamily: "'DM Sans',sans-serif",
+                  background: COLORS.bg,
+                  color: COLORS.text,
+                  outline: "none",
+                  "&:focus": { borderColor: COLORS.indigo },
+                }}
+              />
+              <GradientButton size="sm" onClick={handleAddDomain}>
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {skills.map((s) => (
-                <Box
-                  key={s}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: alpha(COLORS.indigo, 0.08),
-                    color: COLORS.indigo,
-                    borderRadius: "20px",
-                    px: "12px",
-                    py: "5px",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  {s}
+            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+              {interview.job_requirements.domains.map((domain) => {
+                const [key, value] = Object.entries(domain)[0];
+                return (
                   <Box
-                    onClick={() =>
-                      setSkills((prev) => prev.filter((x) => x !== s))
-                    }
+                    key={key}
                     sx={{
-                      cursor: "pointer",
-                      opacity: 0.6,
-                      "&:hover": { opacity: 1 },
-                      fontSize: 16,
-                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: alpha(COLORS.indigo, 0.08),
+                      color: COLORS.indigo,
+                      borderRadius: "20px",
+                      px: "12px",
+                      py: "5px",
+                      fontSize: 13,
+                      fontWeight: 600,
                     }}
                   >
-                    ×
+                    {key} | {value} yrs
+                    <Box
+                      onClick={() => handleRemoveDomain(key)}
+                      sx={{
+                        cursor: "pointer",
+                        opacity: 0.6,
+                        "&:hover": { opacity: 1 },
+                        fontSize: 16,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </Box>
                   </Box>
-                </Box>
-              ))}
-              {skills.length === 0 && (
+                );
+              })}
+              {interview.job_requirements.domains.length === 0 && (
                 <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No skills added yet.
+                  No domains added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
+
+          {/* Softskills */}
           <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
               Softskills
@@ -331,10 +614,12 @@ const OrgCreateRole: React.FC = () => {
             <Box sx={{ display: "flex", gap: "8px", mb: "12px" }}>
               <Box
                 component="input"
-                value={skillInput}
-                onChange={(e: any) => setSkillInput(e.target.value)}
-                onKeyDown={(e: any) => e.key === "Enter" && addSkill()}
-                placeholder="Type a skill and press Enter..."
+                value={softskillInput}
+                onChange={(e: any) => setSoftskillInput(e.target.value)}
+                onKeyDown={(e: any) =>
+                  e.key === "Enter" && handleAddSoftskill()
+                }
+                placeholder="e.g. Leadership, Communication..."
                 sx={{
                   flex: 1,
                   border: "1px solid rgba(0,0,0,0.1)",
@@ -348,14 +633,14 @@ const OrgCreateRole: React.FC = () => {
                   "&:focus": { borderColor: COLORS.indigo },
                 }}
               />
-              <GradientButton size="sm" onClick={addSkill}>
+              <GradientButton size="sm" onClick={handleAddSoftskill}>
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {skills.map((s) => (
+            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+              {interview.job_requirements.softskills.map((skill) => (
                 <Box
-                  key={s}
+                  key={skill}
                   sx={{
                     display: "flex",
                     alignItems: "center",
@@ -369,11 +654,9 @@ const OrgCreateRole: React.FC = () => {
                     fontWeight: 600,
                   }}
                 >
-                  {s}
+                  {skill}
                   <Box
-                    onClick={() =>
-                      setSkills((prev) => prev.filter((x) => x !== s))
-                    }
+                    onClick={() => handleRemoveSoftskill(skill)}
                     sx={{
                       cursor: "pointer",
                       opacity: 0.6,
@@ -386,18 +669,17 @@ const OrgCreateRole: React.FC = () => {
                   </Box>
                 </Box>
               ))}
-              {skills.length === 0 && (
+              {interview.job_requirements.softskills.length === 0 && (
                 <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No skills added yet.
+                  No softskills added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
         </Box>
 
-        {/* Right col */}
+        {/* Right col - Preview */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          {/* Preview */}
           <SoftCard
             sx={{
               p: "22px 24px",
@@ -417,36 +699,139 @@ const OrgCreateRole: React.FC = () => {
             >
               Preview
             </Typography>
-            <Typography sx={{ fontSize: 18, fontWeight: 700, mb: "4px" }}>
-              {title || "Role Title"}
+            <Typography sx={{ fontSize: 18, fontWeight: 700, mb: "8px" }}>
+              {interview.role || "Role title"}
             </Typography>
-            <Typography
-              sx={{ fontSize: 13, color: COLORS.textMuted, mb: "10px" }}
-            >
-              {dept || "Department"} · {location || "Location"} · {type}
-            </Typography>
-            <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              {skills.slice(0, 4).map((s) => (
-                <Box
-                  key={s}
+
+            {/* Languages Preview */}
+            {interview.job_requirements.languages.length > 0 && (
+              <Box sx={{ mb: "12px" }}>
+                <Typography
                   sx={{
-                    background: alpha(COLORS.indigo, 0.1),
-                    color: COLORS.indigo,
-                    borderRadius: "20px",
-                    px: "10px",
-                    py: "3px",
                     fontSize: 11,
                     fontWeight: 600,
+                    color: COLORS.textMuted,
+                    mb: "6px",
                   }}
                 >
-                  {s}
+                  Languages & Frameworks
+                </Typography>
+                <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {interview.job_requirements.languages
+                    .slice(0, 3)
+                    .map((lang) => {
+                      const [key, value] = Object.entries(lang)[0];
+                      return (
+                        <Box
+                          key={key}
+                          sx={{
+                            background: alpha(COLORS.indigo, 0.1),
+                            color: COLORS.indigo,
+                            borderRadius: "20px",
+                            px: "10px",
+                            py: "3px",
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {key} ({value}y)
+                        </Box>
+                      );
+                    })}
                 </Box>
-              ))}
-            </Box>
+              </Box>
+            )}
+
+            {/* Domains Preview */}
+            {interview.job_requirements.domains.length > 0 && (
+              <Box sx={{ mb: "12px" }}>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: COLORS.textMuted,
+                    mb: "6px",
+                  }}
+                >
+                  Domains
+                </Typography>
+                <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {interview.job_requirements.domains
+                    .slice(0, 3)
+                    .map((domain) => {
+                      const [key, value] = Object.entries(domain)[0];
+                      return (
+                        <Box
+                          key={key}
+                          sx={{
+                            background: alpha(COLORS.indigo, 0.1),
+                            color: COLORS.indigo,
+                            borderRadius: "20px",
+                            px: "10px",
+                            py: "3px",
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {key} ({value}y)
+                        </Box>
+                      );
+                    })}
+                </Box>
+              </Box>
+            )}
+
+            {/* Softskills Preview */}
+            {interview.job_requirements.softskills.length > 0 && (
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: COLORS.textMuted,
+                    mb: "6px",
+                  }}
+                >
+                  Softskills
+                </Typography>
+                <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  {interview.job_requirements.softskills
+                    .slice(0, 4)
+                    .map((skill) => (
+                      <Box
+                        key={skill}
+                        sx={{
+                          background: alpha(COLORS.indigo, 0.1),
+                          color: COLORS.indigo,
+                          borderRadius: "20px",
+                          px: "10px",
+                          py: "3px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {skill}
+                      </Box>
+                    ))}
+                </Box>
+              </Box>
+            )}
           </SoftCard>
 
-          <GradientButton fullWidth size="lg" onClick={handleCreate}>
-            {saved ? "✓ Role Created!" : "Create Role"}
+          <GradientButton fullWidth size="lg" onClick={createInterview}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "0.5rem",
+              }}
+            >
+              {status == "loading" && (
+                <CircularProgress size={15} sx={{ color: COLORS.white }} />
+              )}{" "}
+              Create Role
+            </Box>
           </GradientButton>
           <GradientButton
             fullWidth

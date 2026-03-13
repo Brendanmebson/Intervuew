@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 // Prepper (individual user) app
 import Dashboard from "./pages/Dashboard";
 import Interview from "./pages/Interview";
+import ApplyPage from "./pages/interviewApplication";
 import Report from "./pages/Report";
 import Reports from "./pages/Reports";
 import History from "./pages/History";
@@ -74,6 +75,10 @@ const AppShell: React.FC = () => {
           path="/interview/:applicationId/:interviewId"
           element={<Interview />}
         />
+        <Route
+          path="/interview/application/:interviewId"
+          element={<ApplyPage />}
+        />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/history" element={<History />} />
@@ -81,12 +86,13 @@ const AppShell: React.FC = () => {
 
         {/* ── Org app ───────────────────────────────── */}
         <Route path="/org" element={<OrgDash />} />
-        <Route path="/org/roles" element={<OrgJobRoles />} />
-        <Route path="/org/roles/new" element={<OrgCreateRole />} />
-        <Route path="/org/roles/:id" element={<OrgRoleDetail />} />
+        <Route path="/org/interview" element={<OrgJobRoles />} />
+        <Route path="/org/interview/new" element={<OrgCreateRole />} />
+        <Route
+          path="/org/interview_detail/:interviewId"
+          element={<OrgRoleDetail />}
+        />
         <Route path="/org/applicants" element={<OrgCandidates />} />
-        <Route path="/org/candidates" element={<OrgCandidateDetail />} />
-        <Route path="/org/interviews" element={<OrgInterviews />} />
         <Route path="/org/analytics" element={<OrgAnalytics />} />
         <Route path="/org/settings" element={<OrgSettings />} />
 

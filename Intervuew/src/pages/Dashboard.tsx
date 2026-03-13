@@ -9,6 +9,8 @@ import { Icon } from "../components/Icons";
 import { COLORS, RADIUS } from "../theme/theme";
 import { AppliedRole } from "@/types";
 import { ALL_SESSIONS } from "../data/sessions";
+import Cookies from "js-cookie";
+import api from "../api/api";
 
 const Dashboard: React.FC = () => {
   const nav = useNavigate();
@@ -21,17 +23,35 @@ const Dashboard: React.FC = () => {
   const avgScore = Math.round(
     ALL_SESSIONS.reduce((a, s) => a + s.score, 0) / ALL_SESSIONS.length,
   );
-  const params = useParams();
-  const userId = params.userId;
+
+  const [userId, setUserId] = useState(null);
+  const [userName, setUserName] = useState(" ");
+
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const response = await api.get("/User/me");
+        const nameRequest = await api.get("/User");
+
+        setUserId(response.data.id);
+        setUserName(nameRequest.data.name);
+        console.log("user_id cookie:", Cookies.get("user_id"));
+      } catch (err) {
+        nav("/login");
+      }
+    };
+    fetchMe();
+  }, []);
 
   const [appliedRoles, setAppliedRoles] = useState<AppliedRole[]>([]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleString("en-US", {
-      month: "short", // "Feb"
-      day: "numeric", // "11"
-      hour: "numeric", // "10am"
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
       hour12: true,
     });
   };
@@ -39,28 +59,24 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const getApplicantIdAndInterviews = async () => {
       try {
-        const reponse = await fetch(
+        console.log(userId);
+        const reponse = await api.get(
           `http://localhost:8000/User/${userId}/applicant/interviews`,
         );
-
-        if (!reponse.ok) {
-          throw new Error(`error fetching data! ${reponse.status}`);
-        }
-
-        const data = await reponse.json();
+        console.log("applied roles: ", reponse.data);
+        const data = await reponse.data;
         setAppliedRoles(data);
         console.log(data);
       } catch (err) {}
     };
 
     getApplicantIdAndInterviews();
-  }, []);
+  }, [userId]);
 
   return (
     <SidebarLayout
-      userLabel="Alex Johnson"
-      userSub="Free plan"
-      userInitial="A"
+      userLabel={userName}
+      userInitial={userName[0]}
       navItems={[
         { icon: "home", label: "Dashboard", active: true },
         { icon: "mic", label: "Start Interview", to: "/interview" },
@@ -72,7 +88,7 @@ const Dashboard: React.FC = () => {
       {/* Header */}
       <Box className="fade-up" sx={{ mb: "32px" }}>
         <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
-          {greeting}, Alex ✦
+          {greeting}, {userName} ✦
         </Typography>
         <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
           Ready to practice? Your AI interviewer is waiting.
@@ -128,7 +144,7 @@ const Dashboard: React.FC = () => {
             variant="h5"
             sx={{ color: "white", mb: "9px", lineHeight: 1.25, fontSize: 21 }}
           >
-            Start a New
+            Start Your
             <br />
             Interview
           </Typography>
@@ -140,11 +156,9 @@ const Dashboard: React.FC = () => {
               lineHeight: 1.5,
             }}
           >
-            Practice with AI-powered real-time questions tailored to your role.
+            or Practice with AI-powered real-time questions tailored to your
+            role.
           </Typography>
-          <GradientButton size="sm" to="/interview">
-            Begin Session →
-          </GradientButton>
         </Box>
 
         {/* Stats */}

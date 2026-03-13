@@ -1,21 +1,24 @@
 import React, { useState } from "react";
-import { Box, Typography, TextField } from "@mui/material";
+import { Box, Typography, TextField, Alert } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { LogoSVG } from "../components/Icons";
 import { SoftCard, GradientButton, OrbBackground } from "../components/shared";
 import { COLORS, RADIUS } from "../theme/theme";
 import { UserRole } from "../types";
+import api from "../api/api";
 
 const Login: React.FC = () => {
   const nav = useNavigate();
   const [role, setRole] = useState<UserRole>("applicant");
   const [isSignup, setIsSignup] = useState(false);
-  const [id, setId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
+
   const inputSx = {
     "& .MuiOutlinedInput-root": {
       background: "#FAFAFA",
@@ -29,76 +32,51 @@ const Login: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError(null);
   };
 
-  const hanldeSubmit = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isSignup) {
-      createAccount(formData, role);
-    } else {
-      Login(formData, role);
+    setLoading(true);
+    setError(null);
+    try {
+      if (isSignup) {
+        await createAccount(formData, role);
+      } else {
+        await handleLogin(formData, role);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const Login = async (data: typeof formData, type: typeof role) => {
+  const handleLogin = async (data: typeof formData, type: typeof role) => {
     const loginData = { email: data.email, password: data.password };
     try {
-      if (type == "applicant") {
-        const response = await fetch("http://localhost:8000/User/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(loginData),
-        });
-
-        const result = await response.json();
-        nav(`dashbaord/${result.id}`);
-      } else if (type == "org") {
-        const response = await fetch(
-          "http://localhost:8000/Organization/create",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(loginData),
-          },
-        );
-        const resuslt = await response.json();
-        nav(`/org/${resuslt.id}`);
+      if (type === "applicant") {
+        await api.post("/User/login/", loginData);
+        nav("/dashboard");
+      } else {
+        await api.post("/Organization/login/", loginData);
+        nav("/org");
       }
-    } catch (error) {}
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Invalid email or password");
+    }
   };
 
   const createAccount = async (data: typeof formData, type: typeof role) => {
-    if (type == "applicant") {
-      const response = await fetch("http://localhost:8000/User/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      const result = await response.json();
-      nav(`/dashboard/${result.id}`);
-    } else if (type == "org") {
-      const response = await fetch(
-        "http://localhost:8000/Organization/create",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        },
-      );
-      const result = await response.json();
-      nav(`/org/${result.id}`);
+    try {
+      if (type === "applicant") {
+        await api.post("/User/create", data);
+        nav("/dashboard");
+      } else {
+        await api.post("/Organization/create", data);
+        nav("/org");
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Could not create account");
     }
   };
 
@@ -138,6 +116,8 @@ const Login: React.FC = () => {
               : "Sign in to continue"}
           </Typography>
         </Box>
+
+        {/* Role Toggle */}
         <Box
           sx={{
             display: "flex",
@@ -150,7 +130,7 @@ const Login: React.FC = () => {
           {(
             [
               ["applicant", "Applicant"],
-              ["org", " Organization"],
+              ["org", "Organization"],
             ] as [UserRole, string][]
           ).map(([v, l]) => (
             <Box
@@ -176,10 +156,26 @@ const Login: React.FC = () => {
             </Box>
           ))}
         </Box>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: "13px" }}>
+
+        {/* Error */}
+        {error && (
+          <Alert
+            severity="error"
+            sx={{ mb: 2, borderRadius: RADIUS.input, fontSize: 13 }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Form */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: "flex", flexDirection: "column", gap: "13px" }}
+        >
           {isSignup && (
             <TextField
-              label="Full Name"
+              label={role === "org" ? "Company Name" : "Full Name"}
               fullWidth
               size="small"
               name="name"
@@ -200,31 +196,25 @@ const Login: React.FC = () => {
           />
           <TextField
             label="Password"
+            name="password"
             type="password"
+            value={formData.password}
+            onChange={handleChange}
             fullWidth
             size="small"
             sx={inputSx}
           />
-          {role === "org" && isSignup && (
-            <TextField
-              label="Company Name"
-              fullWidth
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              size="small"
-              sx={inputSx}
-            />
-          )}
-          <GradientButton
-            fullWidth
-            size="md"
-            onClick={() => nav(role === "applicant" ? "/dashboard" : "/org")}
-            sx={{ mt: "4px", py: "13px" }}
-          >
-            {isSignup ? "Create Account →" : "Sign In →"}
-          </GradientButton>
+          <button type="submit" style={{ all: "unset", width: "100%" }}>
+            <GradientButton fullWidth size="md" sx={{ mt: "4px", py: "13px" }}>
+              {loading
+                ? "Please wait..."
+                : isSignup
+                  ? "Create Account →"
+                  : "Sign In →"}
+            </GradientButton>
+          </button>
         </Box>
+
         <Typography
           sx={{
             textAlign: "center",

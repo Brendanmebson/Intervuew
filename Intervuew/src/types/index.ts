@@ -49,7 +49,7 @@ export interface ScoreCategory {
   color: string;
 }
 
-interface Languages {
+interface Language {
   [key: string]: number;
 }
 interface Domain {
@@ -57,15 +57,27 @@ interface Domain {
 }
 
 interface JobRequirements {
-  role: String;
-  languages: Languages;
-  domain: Domain;
+  role: string;
+  languages: Language[];
+  domains: Domain[];
   softskills: string[];
+}
+
+export interface InterviewRequest {
+  role: string;
+  description: string;
+  organization_id: string;
+  job_requirements: JobRequirements;
+  start_date: string;
+  end_date: string;
+  duration: number;
 }
 
 export interface InterviewDict {
   id: string;
   role: string;
+  description: string;
+  organization_id: string;
   job_requirements: JobRequirements;
   start_date: string;
   end_date: string;

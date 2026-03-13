@@ -7,11 +7,11 @@ import { SoftCard, GradientButton } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
 import { CANDIDATES, JOB_ROLES, STATUS_COLORS } from "../data/orgData";
+import Cookies from "js-cookie";
 
 const OrgDash: React.FC = () => {
   const nav = useNavigate();
-  const params = useParams();
-  const organizationId = params.organizationId;
+  const orgId = Cookies.get("org_id");
 
   const recentCandidates = CANDIDATES.slice(0, 4);
   const activeRoles = JOB_ROLES.filter((r) => r.status === "Active");
@@ -26,15 +26,16 @@ const OrgDash: React.FC = () => {
   return (
     <SidebarLayout
       userLabel="Acme Corp"
-      userSub="Business plan"
       userInitial="A"
       navItems={[
-        { icon: "home", label: "Overview", active: true, to: "/org" },
-        { icon: "briefcase", label: "Job Roles", to: "/org/roles" },
-        { icon: "users", label: "Candidates", to: "/org/candidates" },
-        { icon: "mic", label: "Interviews", to: "/org/interviews" },
-        { icon: "chart", label: "Analytics", to: "/org/analytics" },
-        { icon: "settings", label: "Settings", to: "/org/settings" },
+        { icon: "home", label: "Overview", active: true, to: `/org` },
+        {
+          icon: "briefcase",
+          label: "Job Roles",
+          to: `/org/interview`,
+        },
+        { icon: "users", label: "Candidates", to: `/org/applicants` },
+        { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
     >
       {/* Header */}
@@ -55,7 +56,10 @@ const OrgDash: React.FC = () => {
             Manage interviews, candidates, and analytics.
           </Typography>
         </Box>
-        <GradientButton size="md" onClick={() => nav("/org/roles/new")}>
+        <GradientButton
+          size="md"
+          onClick={() => nav(`/org/interview/new/${orgId}`)}
+        >
           + Create Job Role
         </GradientButton>
       </Box>
@@ -273,7 +277,7 @@ const OrgDash: React.FC = () => {
             Active Job Roles
           </Typography>
           <Typography
-            onClick={() => nav("/org/roles")}
+            onClick={() => nav(`/org/interview/${orgId}`)}
             sx={{
               fontSize: 13,
               color: COLORS.indigo,
@@ -296,7 +300,7 @@ const OrgDash: React.FC = () => {
             <SoftCard
               key={r.id}
               sx={{ p: "20px 22px", cursor: "pointer" }}
-              onClick={() => nav(`/org/roles/${r.id}`)}
+              onClick={() => nav(`/org/interview/${orgId}`)}
             >
               <Box
                 sx={{
