@@ -9,8 +9,17 @@ import {
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { COLORS, RADIUS, SHADOWS } from "../theme/theme";
-
 import api from "../api/api";
+
+interface InterviewData {
+  role: string;
+  type: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  requirements: string[];
+  status: string;
+}
 
 export default function ApplyPage() {
   const [name, setName] = useState("");
@@ -23,37 +32,63 @@ export default function ApplyPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [interviewData, setInterviewData] = useState<InterviewData | null>(
+    null,
+  );
+  const [userId, setUserId] = useState(null);
+
   const param = useParams();
   const interviewId = param.interviewId;
-  const [userId, setUserId] = useState(null);
   const nav = useNavigate();
+
   useEffect(() => {
     const fetchMe = async () => {
       try {
         const response = await api.get("/User/me");
         setUserId(response.data);
       } catch (err) {
-        // cookie invalid or expired, redirect to login
         nav("/login");
       }
     };
     fetchMe();
   }, []);
 
-  const interview = {
-    role: "Senior Frontend Engineer",
-    type: "Engineering · Full-time · Remote",
-    description:
-      "We're looking for an experienced frontend engineer to join our product team. You'll be building scalable user interfaces and collaborating closely with design and backend teams.",
-    startDate: "Jan 15, 2026",
-    endDate: "Feb 15, 2026",
-    requirements: [
-      "3+ years of React experience",
-      "Strong TypeScript skills",
-      "Experience with REST APIs",
-      "Excellent communication skills",
-    ],
-  };
+  useEffect(() => {
+    const fetchInterview = async () => {
+      try {
+        const res = await api.get(`/Interview/full/${interviewId}`);
+        const data = res.data;
+
+        const parseRequirements = (job_requirements: string): string[] =>
+          job_requirements
+            .split("\n")
+            .filter((l) => l.trim().startsWith("-"))
+            .map((l) => l.replace("-", "").trim())
+            .filter(Boolean);
+
+        const formatDate = (dateStr: string) =>
+          new Date(dateStr).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+
+        setInterviewData({
+          role: data.role,
+          type: `${data.type} · ${data.duration} min`,
+          description: data.description,
+          startDate: formatDate(data.start_date),
+          endDate: formatDate(data.end_date),
+          requirements: parseRequirements(data.job_requirements),
+          status: data.status,
+        });
+      } catch {
+        // non-blocking
+      }
+    };
+
+    if (interviewId) fetchInterview();
+  }, [interviewId]);
 
   const handleFile = (f: File | null) => {
     if (f && f.type === "application/pdf") {
@@ -75,7 +110,6 @@ export default function ApplyPage() {
     setLoading(true);
 
     try {
-      // get user_id from cookie via backend
       const { data: user } = await api.get("/User/me");
 
       const formData = new FormData();
@@ -110,7 +144,7 @@ export default function ApplyPage() {
     }
   };
 
-  if (!userId) return;
+  if (!userId) return null;
 
   return (
     <Box
@@ -144,20 +178,31 @@ export default function ApplyPage() {
         >
           <Box sx={{ p: 3, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
             <Chip
-              label="Open position"
+              label={
+                interviewData
+                  ? interviewData.status === "active"
+                    ? "Open position"
+                    : "Closed position"
+                  : "Loading..."
+              }
               size="small"
               sx={{
                 mb: 1.5,
-                bgcolor: "#f0fdf4",
-                color: COLORS.green,
+                bgcolor:
+                  interviewData?.status === "active" ? "#f0fdf4" : "#f3f4f6",
+                color:
+                  interviewData?.status === "active"
+                    ? COLORS.green
+                    : COLORS.textMuted,
                 fontWeight: 600,
               }}
             />
-            <Typography variant="h5">{interview.role}</Typography>
+            <Typography variant="h5">{interviewData?.role ?? "—"}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {interview.type}
+              {interviewData?.type ?? "—"}
             </Typography>
           </Box>
+
           <Box
             sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}
           >
@@ -168,33 +213,37 @@ export default function ApplyPage() {
                 color="text.secondary"
                 sx={{ mt: 0.5 }}
               >
-                {interview.description}
+                {interviewData?.description ?? "—"}
               </Typography>
             </Box>
+
             <Divider />
+
             <Box
               sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
             >
               <Box>
                 <Typography variant="overline">Start date</Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {interview.startDate}
+                  {interviewData?.startDate ?? "—"}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="overline">End date</Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {interview.endDate}
+                  {interviewData?.endDate ?? "—"}
                 </Typography>
               </Box>
             </Box>
+
             <Divider />
+
             <Box>
               <Typography variant="overline">Requirements</Typography>
               <Box
                 sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}
               >
-                {interview.requirements.map((req, i) => (
+                {(interviewData?.requirements ?? []).map((req, i) => (
                   <Box
                     key={i}
                     sx={{ display: "flex", alignItems: "center", gap: 1 }}
@@ -310,7 +359,10 @@ export default function ApplyPage() {
                   cursor: "pointer",
                   transition: "all 0.15s",
                   bgcolor: dragOver ? "#f5f5ff" : "#FAFAFA",
-                  "&:hover": { borderColor: COLORS.indigo, bgcolor: "#f5f5ff" },
+                  "&:hover": {
+                    borderColor: COLORS.indigo,
+                    bgcolor: "#f5f5ff",
+                  },
                 }}
               >
                 <input

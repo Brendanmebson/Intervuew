@@ -1,157 +1,421 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Icon } from '../components/Icons';
-import { SoftCard, GradientButton, ScoreRing, CategoryBar, ScoreChip } from '../components/shared';
-import { COLORS } from '../theme/theme';
-import { ALL_SESSIONS, BREAKDOWN_BY_SESSION } from '../data/sessions';
+import React, { useState, useEffect } from "react";
+import { Box, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
+import { useNavigate, useParams } from "react-router-dom";
+import { SoftCard, ScoreRing } from "../components/shared";
+import { COLORS } from "../theme/theme";
+import api from "../api/api";
+
+interface ProctoringAlert {
+  frame: number;
+  reason: string;
+}
+
+interface ReportData {
+  role: string;
+  duration: number;
+  interview_date: string | null;
+  started_session: boolean | null;
+  ended_session: boolean | null;
+  score: number | null;
+  cheating_detected: boolean | null;
+  proctoring_alerts: ProctoringAlert[];
+}
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const Report: React.FC = () => {
   const nav = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { interviewId } = useParams<{ interviewId: string }>();
   const [anim, setAnim] = useState(false);
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setAnim(true), 300);
-    return () => clearTimeout(t);
-  }, [id]);
+    const fetchReport = async () => {
+      try {
+        const res = await api.get(`/User/report/${interviewId}`);
+        setReport(res.data);
+        setTimeout(() => setAnim(true), 300);
+      } catch (err: any) {
+        if (err?.response?.status === 401 || err?.response?.status === 403) {
+          nav("/login");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReport();
+  }, [interviewId]);
 
-  // Reset animation when session changes
-  useEffect(() => { setAnim(false); }, [id]);
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          background: COLORS.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography sx={{ color: COLORS.textMuted, fontSize: 14 }}>
+          Loading report...
+        </Typography>
+      </Box>
+    );
+  }
 
-  const session = ALL_SESSIONS.find(s => s.id === id) ?? ALL_SESSIONS[0];
-  const breakdown = BREAKDOWN_BY_SESSION[session.id] ?? BREAKDOWN_BY_SESSION['1'];
+  if (!report) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          background: COLORS.bg,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography sx={{ color: COLORS.textMuted, fontSize: 14 }}>
+          Report not found.
+        </Typography>
+      </Box>
+    );
+  }
 
-  const strengths =
-    session.score >= 88
-      ? ['Excellent articulation of complex concepts', 'Strong narrative with measurable outcomes', 'Confident delivery with minimal filler words']
-      : session.score >= 80
-      ? ['Clear communication throughout', 'Good use of the STAR method', 'Demonstrated relevant experience']
-      : ['Showed genuine enthusiasm for the role', 'Honest and reflective in responses', 'Adequate foundational knowledge'];
+  const scoreLabel =
+    report.score === null
+      ? "Pending"
+      : report.score >= 88
+        ? "Excellent"
+        : report.score >= 78
+          ? "Good"
+          : "Needs Work";
 
-  const improvements =
-    session.score >= 88
-      ? ['Expand on stakeholder management examples', 'Provide more quantified metrics', 'Work on conciseness — some answers ran long']
-      : session.score >= 80
-      ? ['Add more specific data and numbers', 'Practice tighter answer structure', 'Include more cross-functional examples']
-      : ['Strengthen examples with concrete outcomes', 'Work on structured response frameworks', 'Research industry benchmarks more deeply'];
+  const scoreLabelColor =
+    report.score === null
+      ? COLORS.textLight
+      : report.score >= 88
+        ? COLORS.green
+        : report.score >= 78
+          ? COLORS.amber
+          : COLORS.red;
+
+  const alerts = report.proctoring_alerts ?? [];
 
   return (
-    <Box sx={{ minHeight: '100vh', background: COLORS.bg, p: '32px 44px', maxWidth: 980, mx: 'auto' }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        background: COLORS.bg,
+        p: "32px 44px",
+        maxWidth: 980,
+        mx: "auto",
+      }}
+    >
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '34px' }}>
-        <Box>
-          <Box
-            component="button"
-            onClick={() => nav(-1 as any)}
-            sx={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: COLORS.textMuted, fontFamily: "'DM Sans',sans-serif", display: 'flex', alignItems: 'center', gap: '6px', mb: '8px', p: 0, '&:hover': { color: COLORS.text } }}
-          >
-            ← Back
-          </Box>
-          <Typography variant="h4" sx={{ fontSize: 25, mb: '4px' }}>Interview Report</Typography>
-          <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
-            {session.role} · {session.date} · {session.duration}
-          </Typography>
+      <Box className="fade-up" sx={{ mb: "34px" }}>
+        <Box
+          component="button"
+          onClick={() => nav(-1 as any)}
+          sx={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: 13,
+            color: COLORS.textMuted,
+            fontFamily: "'DM Sans',sans-serif",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            mb: "8px",
+            p: 0,
+            "&:hover": { color: COLORS.text },
+          }}
+        >
+          ← Back
         </Box>
-        <Box sx={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {/* Session switcher */}
-          <Box sx={{ display: 'flex', gap: '6px' }}>
-            {ALL_SESSIONS.map(s => (
-              <Box
-                key={s.id}
-                onClick={() => nav(`/report/${s.id}`)}
-                sx={{
-                  width: 32, height: 32, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                  background: s.id === session.id ? alpha(COLORS.indigo, 0.12) : 'transparent',
-                  color: s.id === session.id ? COLORS.indigo : COLORS.textMuted,
-                  border: s.id === session.id ? `1px solid ${alpha(COLORS.indigo, 0.25)}` : '1px solid transparent',
-                  '&:hover': { background: alpha(COLORS.indigo, 0.07) },
-                  transition: 'all 0.15s',
-                }}
-              >
-                {s.id}
-              </Box>
-            ))}
-          </Box>
-          <GradientButton size="md" startIcon={<Icon name="download" size={14} color="white" />}>
-            Download PDF
-          </GradientButton>
-        </Box>
+        <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+          Interview Report
+        </Typography>
+        <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
+          {report.role} · {formatDate(report.interview_date)} ·{" "}
+          {report.duration} min
+        </Typography>
       </Box>
 
-      {/* Score + Breakdown */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '18px', mb: '18px' }}>
-        <SoftCard sx={{ p: '34px', display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 210 }}>
-          <Typography sx={{ fontSize: 11, fontWeight: 700, color: COLORS.textMuted, letterSpacing: '0.07em', textTransform: 'uppercase', mb: '18px' }}>
+      {/* Score + Session status */}
+      <Box
+        className="fade-up-1"
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "auto 1fr",
+          gap: "18px",
+          mb: "18px",
+        }}
+      >
+        {/* Score ring */}
+        <SoftCard
+          sx={{
+            p: "34px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            minWidth: 210,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: COLORS.textMuted,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              mb: "18px",
+            }}
+          >
             Overall Score
           </Typography>
-          <ScoreRing score={session.score} animated={anim} />
-          <Box sx={{
-            mt: '14px', borderRadius: '20px', px: '14px', py: '5px', fontSize: 13, fontWeight: 700,
-            background: alpha(session.score >= 88 ? COLORS.green : session.score >= 78 ? COLORS.amber : COLORS.red, 0.1),
-            color: session.score >= 88 ? COLORS.green : session.score >= 78 ? COLORS.amber : COLORS.red,
-          }}>
-            {session.score >= 88 ? 'Excellent' : session.score >= 78 ? 'Good' : 'Needs Work'}
+          {report.score !== null ? (
+            <ScoreRing score={report.score} animated={anim} />
+          ) : (
+            <Typography
+              sx={{ fontSize: 32, fontWeight: 700, color: COLORS.textLight }}
+            >
+              —
+            </Typography>
+          )}
+          <Box
+            sx={{
+              mt: "14px",
+              borderRadius: "20px",
+              px: "14px",
+              py: "5px",
+              fontSize: 13,
+              fontWeight: 700,
+              background: alpha(scoreLabelColor, 0.1),
+              color: scoreLabelColor,
+            }}
+          >
+            {scoreLabel}
           </Box>
         </SoftCard>
 
-        <SoftCard sx={{ p: '30px 34px' }}>
-          <Typography variant="h6" sx={{ fontSize: 15, mb: '22px' }}>Category Breakdown</Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '17px' }}>
-            {breakdown.map((b, i) => (
-              <CategoryBar key={i} label={b.label} score={b.score} color={b.color} animated={anim} delay={i * 0.1} />
+        {/* Session info + cheating */}
+        <SoftCard sx={{ p: "30px 34px" }}>
+          <Typography variant="h6" sx={{ fontSize: 15, mb: "20px" }}>
+            Session Details
+          </Typography>
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {[
+              {
+                label: "Interview Date",
+                val: formatDate(report.interview_date),
+              },
+              {
+                label: "Duration",
+                val: `${report.duration} min`,
+              },
+              {
+                label: "Session Status",
+                val: report.ended_session
+                  ? "Completed"
+                  : report.started_session
+                    ? "In Progress"
+                    : "Not Started",
+              },
+            ].map((item) => (
+              <Box
+                key={item.label}
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: COLORS.textMuted,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {item.label}
+                </Typography>
+                <Typography
+                  sx={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}
+                >
+                  {item.val}
+                </Typography>
+              </Box>
+            ))}
+
+            {/* Divider */}
+            <Box sx={{ borderTop: "1px solid rgba(0,0,0,0.05)", pt: "14px" }}>
+              {report.cheating_detected === null ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: COLORS.textLight,
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+                    No proctoring data available
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    p: "14px 16px",
+                    borderRadius: "12px",
+                    background: report.cheating_detected
+                      ? alpha("#ef4444", 0.06)
+                      : alpha(COLORS.green, 0.06),
+                    border: `1px solid ${
+                      report.cheating_detected
+                        ? alpha("#ef4444", 0.2)
+                        : alpha(COLORS.green, 0.2)
+                    }`,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 18 }}>
+                    {report.cheating_detected ? "⚠️" : "✓"}
+                  </Typography>
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: report.cheating_detected
+                          ? "#ef4444"
+                          : COLORS.green,
+                        mb: "2px",
+                      }}
+                    >
+                      {report.cheating_detected
+                        ? "Cheating Detected"
+                        : "No Cheating Detected"}
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                      {alerts.length > 0
+                        ? `${alerts.length} alert${alerts.length > 1 ? "s" : ""} flagged`
+                        : "Session completed with no flags"}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </SoftCard>
+      </Box>
+
+      {/* Proctoring alerts table */}
+      {alerts.length > 0 && (
+        <SoftCard className="fade-up-2" sx={{ p: "26px 30px" }}>
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: COLORS.textMuted,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              mb: "16px",
+            }}
+          >
+            Proctoring Alerts · {alerts.length} flagged
+          </Typography>
+
+          {/* Table header */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "140px 1fr",
+              gap: "12px",
+              p: "10px 16px",
+              borderRadius: "10px 10px 0 0",
+              background: alpha(COLORS.indigo, 0.04),
+              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              fontSize: 11,
+              fontWeight: 700,
+              color: COLORS.textLight,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Box>Frame</Box>
+            <Box>Reason</Box>
+          </Box>
+
+          <Box
+            sx={{
+              border: "1px solid rgba(0,0,0,0.06)",
+              borderTop: "none",
+              borderRadius: "0 0 10px 10px",
+              overflow: "hidden",
+            }}
+          >
+            {alerts.map((alert, i) => (
+              <Box
+                key={i}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "140px 1fr",
+                  gap: "12px",
+                  p: "12px 16px",
+                  alignItems: "center",
+                  borderBottom:
+                    i < alerts.length - 1
+                      ? "1px solid rgba(0,0,0,0.04)"
+                      : "none",
+                  background:
+                    i % 2 === 0 ? "transparent" : alpha(COLORS.indigo, 0.015),
+                  "&:hover": { background: alpha("#ef4444", 0.04) },
+                  transition: "background 0.15s",
+                }}
+              >
+                <Box
+                  sx={{
+                    background: alpha("#ef4444", 0.1),
+                    color: "#ef4444",
+                    borderRadius: "8px",
+                    px: "10px",
+                    py: "4px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fontFamily: "'DM Mono', monospace",
+                    display: "inline-block",
+                    width: "fit-content",
+                  }}
+                >
+                  Frame {alert.frame}
+                </Box>
+                <Typography
+                  sx={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}
+                >
+                  {alert.reason}
+                </Typography>
+              </Box>
             ))}
           </Box>
         </SoftCard>
-      </Box>
-
-      {/* Strengths + Improvements */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', mb: '18px' }}>
-        {[
-          { title: '💪 Strengths',      color: COLORS.green, bg: alpha(COLORS.green, 0.04), border: alpha(COLORS.green, 0.12), items: strengths },
-          { title: '🎯 Areas to Improve', color: COLORS.amber, bg: alpha(COLORS.amber, 0.04), border: alpha(COLORS.amber, 0.12), items: improvements },
-        ].map(s => (
-          <SoftCard key={s.title} sx={{ p: '26px', background: s.bg, border: `1px solid ${s.border}` }}>
-            <Typography variant="h6" sx={{ fontSize: 15, mb: '14px' }}>{s.title}</Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-              {s.items.map((item, i) => (
-                <Box key={i} sx={{ display: 'flex', gap: '9px', alignItems: 'flex-start' }}>
-                  <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: s.color, mt: '6px', flexShrink: 0 }} />
-                  <Typography sx={{ fontSize: 13, lineHeight: 1.6, color: COLORS.textMuted }}>{item}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </SoftCard>
-        ))}
-      </Box>
-
-      {/* Per-question breakdown */}
-      <SoftCard sx={{ p: '28px 32px' }}>
-        <Typography variant="h6" sx={{ fontSize: 15, mb: '20px' }}>Per-Question Breakdown</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {(session.questions ?? []).map((item, i) => (
-            <Box
-              key={i}
-              sx={{
-                display: 'flex', gap: '16px', alignItems: 'flex-start', p: '16px',
-                borderRadius: '14px', background: alpha(COLORS.indigo, 0.03),
-                border: `1px solid ${alpha(COLORS.indigo, 0.06)}`,
-              }}
-            >
-              <Box sx={{ width: 28, height: 28, borderRadius: '8px', background: alpha(COLORS.indigo, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: COLORS.indigo, flexShrink: 0 }}>
-                {i + 1}
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, mb: '4px' }}>{item.q}</Typography>
-                <Typography sx={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5 }}>{item.feedback}</Typography>
-              </Box>
-              <ScoreChip score={item.score} />
-            </Box>
-          ))}
-        </Box>
-      </SoftCard>
+      )}
     </Box>
   );
 };

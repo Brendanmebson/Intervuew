@@ -1,52 +1,106 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
 import { SoftCard, GradientButton, ScoreChip } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-import { CANDIDATES, STATUS_COLORS, CandidateStatus } from "../data/orgData";
+import { STATUS_COLORS } from "../data/orgData";
+import api from "../api/api";
 
+type CandidateStatus = "Recommended" | "Pending" | "Declined";
 type StatusFilter = "All" | CandidateStatus;
+
+interface Candidate {
+  id: string;
+  name: string;
+  interview_id: string;
+  role: string;
+  interview_date: string | null;
+  score: number | null;
+  cheating_detected: boolean | null;
+  status: CandidateStatus;
+  started_session: boolean | null;
+  ended_session: boolean | null;
+}
 
 const OrgCandidates: React.FC = () => {
   const nav = useNavigate();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "score">("date");
-  const params = useParams();
-  const orgId = params.orgId;
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [orgName, setOrgName] = useState(" ");
+  const [loading, setLoading] = useState(true);
 
-  const filtered = CANDIDATES.filter(
-    (c) => statusFilter === "All" || c.status === statusFilter,
-  )
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [meRes, nameRes] = await Promise.all([
+          api.get("/Organization/me"),
+          api.get("/Organization"),
+        ]);
+
+        const orgId = meRes.data.id;
+        setOrgName(nameRes.data.name);
+
+        const candidatesRes = await api.get(
+          `/Organization/candidates/${orgId}`,
+        );
+        setCandidates(candidatesRes.data);
+      } catch (err) {
+        nav("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  const filtered = candidates
+    .filter((c) => statusFilter === "All" || c.status === statusFilter)
     .filter(
       (c) =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.role.toLowerCase().includes(search.toLowerCase()),
     )
-    .sort((a, b) => (sortBy === "score" ? b.score - a.score : 0));
+    .sort((a, b) => {
+      if (sortBy === "score") return (b.score ?? -1) - (a.score ?? -1);
+      // sort by date descending, nulls last
+      if (!a.interview_date && !b.interview_date) return 0;
+      if (!a.interview_date) return 1;
+      if (!b.interview_date) return -1;
+      return (
+        new Date(b.interview_date).getTime() -
+        new Date(a.interview_date).getTime()
+      );
+    });
 
   const counts = {
-    All: CANDIDATES.length,
-    Recommended: CANDIDATES.filter((c) => c.status === "Recommended").length,
-    Review: CANDIDATES.filter((c) => c.status === "Review").length,
-    Pending: CANDIDATES.filter((c) => c.status === "Pending").length,
-    Declined: CANDIDATES.filter((c) => c.status === "Declined").length,
+    All: candidates.length,
+    Recommended: candidates.filter((c) => c.status === "Recommended").length,
+    Pending: candidates.filter((c) => c.status === "Pending").length,
+    Declined: candidates.filter((c) => c.status === "Declined").length,
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   return (
     <SidebarLayout
-      userLabel="Acme Corp"
-      userInitial="A"
+      userLabel={orgName}
+      userInitial={orgName?.[0] ?? "O"}
       navItems={[
         { icon: "home", label: "Overview", active: true, to: `/org` },
-        {
-          icon: "briefcase",
-          label: "Job Roles",
-          to: `/org/interview`,
-        },
+        { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
         { icon: "users", label: "Candidates", to: `/org/applicants` },
         { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
@@ -66,7 +120,7 @@ const OrgCandidates: React.FC = () => {
             Candidates
           </Typography>
           <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
-            {CANDIDATES.length} total · {counts.Recommended} recommended
+            {candidates.length} total · {counts.Recommended} recommended
           </Typography>
         </Box>
       </Box>
@@ -76,56 +130,50 @@ const OrgCandidates: React.FC = () => {
         className="fade-up-1"
         sx={{ display: "flex", gap: "8px", mb: "20px", flexWrap: "wrap" }}
       >
-        {(
-          [
-            "All",
-            "Recommended",
-            "Review",
-            "Pending",
-            "Declined",
-          ] as StatusFilter[]
-        ).map((s) => {
-          const color =
-            s === "All" ? COLORS.indigo : STATUS_COLORS[s as CandidateStatus];
-          const active = statusFilter === s;
-          return (
-            <Box
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              sx={{
-                px: "14px",
-                py: "7px",
-                borderRadius: "20px",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-                transition: "all 0.15s",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                background: active ? alpha(color, 0.12) : COLORS.white,
-                color: active ? color : COLORS.textMuted,
-                border: `1px solid ${active ? alpha(color, 0.3) : "rgba(0,0,0,0.07)"}`,
-                boxShadow: active ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
-              }}
-            >
-              {s}
+        {(["All", "Recommended", "Pending", "Declined"] as StatusFilter[]).map(
+          (s) => {
+            const color =
+              s === "All" ? COLORS.indigo : STATUS_COLORS[s as CandidateStatus];
+            const active = statusFilter === s;
+            return (
               <Box
+                key={s}
+                onClick={() => setStatusFilter(s)}
                 sx={{
-                  background: active ? alpha(color, 0.2) : "rgba(0,0,0,0.07)",
+                  px: "14px",
+                  py: "7px",
+                  borderRadius: "20px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  transition: "all 0.15s",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: active ? alpha(color, 0.12) : COLORS.white,
                   color: active ? color : COLORS.textMuted,
-                  borderRadius: "10px",
-                  px: "7px",
-                  py: "1px",
-                  fontSize: 11,
-                  fontWeight: 700,
+                  border: `1px solid ${active ? alpha(color, 0.3) : "rgba(0,0,0,0.07)"}`,
+                  boxShadow: active ? "none" : "0 1px 3px rgba(0,0,0,0.04)",
                 }}
               >
-                {counts[s]}
+                {s}
+                <Box
+                  sx={{
+                    background: active ? alpha(color, 0.2) : "rgba(0,0,0,0.07)",
+                    color: active ? color : COLORS.textMuted,
+                    borderRadius: "10px",
+                    px: "7px",
+                    py: "1px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {counts[s]}
+                </Box>
               </Box>
-            </Box>
-          );
-        })}
+            );
+          },
+        )}
       </Box>
 
       {/* Search + Sort */}
@@ -222,7 +270,13 @@ const OrgCandidates: React.FC = () => {
           ))}
         </Box>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <Box sx={{ p: "48px", textAlign: "center" }}>
+            <Typography sx={{ color: COLORS.textMuted }}>
+              Loading candidates...
+            </Typography>
+          </Box>
+        ) : filtered.length === 0 ? (
           <Box sx={{ p: "48px", textAlign: "center" }}>
             <Typography sx={{ color: COLORS.textMuted }}>
               No candidates match your search.
@@ -232,7 +286,7 @@ const OrgCandidates: React.FC = () => {
           filtered.map((c, i) => (
             <Box
               key={c.id}
-              onClick={() => nav(`/org/candidates/${c.id}`)}
+              onClick={() => nav(`/org/applicants/${c.id}`)}
               sx={{
                 display: "grid",
                 gridTemplateColumns: "2.2fr 1.5fr 1fr 1fr 1.2fr 0.5fr",
@@ -272,13 +326,15 @@ const OrgCandidates: React.FC = () => {
                     {c.name}
                   </Typography>
                   <Typography sx={{ fontSize: 11, color: COLORS.textMuted }}>
-                    {c.location}
+                    {c.ended_session ? "Completed" : "Not started"}
                   </Typography>
                 </Box>
               </Box>
+
               <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
                 {c.role}
               </Typography>
+
               <Typography
                 sx={{
                   fontSize: 13,
@@ -286,9 +342,18 @@ const OrgCandidates: React.FC = () => {
                   fontFamily: "'DM Mono',monospace",
                 }}
               >
-                {c.date}
+                {formatDate(c.interview_date)}
               </Typography>
-              <ScoreChip score={c.score} />
+
+              {/* Score — show dash for pending */}
+              {c.score !== null ? (
+                <ScoreChip score={c.score} />
+              ) : (
+                <Typography sx={{ fontSize: 13, color: COLORS.textLight }}>
+                  —
+                </Typography>
+              )}
+
               <Box
                 sx={{
                   background: alpha(STATUS_COLORS[c.status], 0.1),
@@ -303,6 +368,7 @@ const OrgCandidates: React.FC = () => {
               >
                 {c.status}
               </Box>
+
               <Typography sx={{ color: COLORS.textLight, fontSize: 16 }}>
                 →
               </Typography>

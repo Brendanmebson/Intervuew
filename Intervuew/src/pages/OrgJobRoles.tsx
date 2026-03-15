@@ -1,43 +1,114 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
 import { SoftCard, GradientButton } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-import { JOB_ROLES, JobRole } from "../data/orgData";
-import Cookies from "js-cookie";
+import api from "../api/api";
+
 type StatusFilter = "All" | "Active" | "Closed";
 
-const statusColor = (s: JobRole["status"]) =>
-  s === "Active" ? COLORS.green : COLORS.textLight;
+interface Interview {
+  id: string;
+  role: string;
+  description: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  duration: number;
+  job_requirements: string;
+  organization_id: string;
+  type: string;
+  user_id: string | null;
+}
+
+interface JobEntry {
+  applicants: any[];
+  interview: Interview;
+}
+
+const statusColor = (s: string) =>
+  s === "active" ? COLORS.green : COLORS.textLight;
+
+const parseSkills = (job_requirements: string): string[] => {
+  const lines = job_requirements.split("\n");
+  return lines
+    .filter((line) => line.trim().startsWith("-"))
+    .map((line) => line.replace("-", "").trim())
+    .filter(Boolean);
+};
+
+const formatDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
 const OrgJobRoles: React.FC = () => {
   const nav = useNavigate();
   const [filter, setFilter] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
+  const [orgName, setOrgName] = useState(" ");
+  const [jobs, setJobs] = useState<JobEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const orgId = Cookies.get("org_id");
-  const filtered = JOB_ROLES.filter(
-    (r) => filter === "All" || r.status === filter,
-  ).filter(
-    (r) =>
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.dept.toLowerCase().includes(search.toLowerCase()),
-  );
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        // Fetch org identity and name in parallel
+        const [meRes, nameRes] = await Promise.all([
+          api.get("/Organization/me"),
+          api.get("/Organization"),
+        ]);
+
+        const orgId = meRes.data.id;
+        setOrgName(nameRes.data.name);
+
+        const jobsRes = await api.get(
+          `/Organization/interview/candidate/report/${orgId}`,
+        );
+
+        const valid: JobEntry[] = (jobsRes.data as any[]).filter(
+          (entry) => entry?.interview,
+        );
+        setJobs(valid);
+      } catch (err) {
+        nav("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  const filtered = jobs
+    .filter((entry) => {
+      const status = entry.interview.status;
+      if (filter === "All") return true;
+      return status.toLowerCase() === filter.toLowerCase();
+    })
+    .filter((entry) =>
+      entry.interview.role.toLowerCase().includes(search.toLowerCase()),
+    );
+
+  const activeCount = jobs.filter(
+    (e) => e.interview.status === "active",
+  ).length;
+  const closedCount = jobs.filter(
+    (e) => e.interview.status !== "active",
+  ).length;
 
   return (
     <SidebarLayout
-      userLabel="Acme Corp"
-      userInitial="A"
+      userLabel={orgName}
+      userInitial={orgName?.[0] ?? "O"}
       navItems={[
         { icon: "home", label: "Overview", active: true, to: `/org` },
-        {
-          icon: "briefcase",
-          label: "Job Roles",
-          to: `/org/interview`,
-        },
+        { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
         { icon: "users", label: "Candidates", to: `/org/applicants` },
         { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
@@ -57,8 +128,7 @@ const OrgJobRoles: React.FC = () => {
             Job Roles
           </Typography>
           <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
-            {JOB_ROLES.length} roles total ·{" "}
-            {JOB_ROLES.filter((r) => r.status === "Active").length} active
+            {jobs.length} roles total · {activeCount} active
           </Typography>
         </Box>
         <GradientButton size="md" onClick={() => nav(`/org/interview/new`)}>
@@ -77,16 +147,8 @@ const OrgJobRoles: React.FC = () => {
         }}
       >
         {[
-          {
-            label: "Active",
-            val: JOB_ROLES.filter((r) => r.status === "Active").length,
-            color: COLORS.green,
-          },
-          {
-            label: "Closed",
-            val: JOB_ROLES.filter((r) => r.status === "Closed").length,
-            color: COLORS.textMuted,
-          },
+          { label: "Active", val: activeCount, color: COLORS.green },
+          { label: "Closed", val: closedCount, color: COLORS.textMuted },
         ].map((s) => (
           <SoftCard
             key={s.label}
@@ -199,183 +261,189 @@ const OrgJobRoles: React.FC = () => {
           gap: "14px",
         }}
       >
-        {filtered.map((r) => (
-          <SoftCard
-            key={r.id}
-            sx={{ p: "24px 26px", cursor: "pointer" }}
-            onClick={() => nav(`/org/interview_detail/${r.id}`)}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                mb: "14px",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <Box
-                  sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: "13px",
-                    background: alpha(COLORS.indigo, 0.08),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="briefcase" size={18} color={COLORS.indigo} />
-                </Box>
-                <Box>
-                  <Typography sx={{ fontWeight: 700, fontSize: 15, mb: "2px" }}>
-                    {r.title}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
-                    {r.dept} · {r.location}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box
-                sx={{
-                  background: alpha(statusColor(r.status), 0.1),
-                  color: statusColor(r.status),
-                  borderRadius: "20px",
-                  px: "10px",
-                  py: "3px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                }}
+        {loading ? (
+          <Typography sx={{ color: COLORS.textMuted, fontSize: 14 }}>
+            Loading roles...
+          </Typography>
+        ) : (
+          filtered.map(({ interview, applicants }) => {
+            const skills = parseSkills(interview.job_requirements);
+            return (
+              <SoftCard
+                key={interview.id}
+                sx={{ p: "24px 26px", cursor: "pointer" }}
+                onClick={() => nav(`/org/interview/${interview.id}`)}
               >
-                {r.status}
-              </Box>
-            </Box>
-
-            <Typography
-              sx={{
-                fontSize: 13,
-                color: COLORS.textMuted,
-                lineHeight: 1.6,
-                mb: "16px",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {r.description}
-            </Typography>
-
-            {/* Skills */}
-            <Box
-              sx={{ display: "flex", gap: "6px", flexWrap: "wrap", mb: "16px" }}
-            >
-              {r.skills.slice(0, 3).map((s) => (
-                <Box
-                  key={s}
-                  sx={{
-                    background: alpha(COLORS.indigo, 0.07),
-                    color: COLORS.indigo,
-                    borderRadius: "20px",
-                    px: "10px",
-                    py: "3px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}
-                >
-                  {s}
-                </Box>
-              ))}
-              {r.skills.length > 3 && (
                 <Box
                   sx={{
-                    background: "rgba(0,0,0,0.05)",
-                    color: COLORS.textMuted,
-                    borderRadius: "20px",
-                    px: "10px",
-                    py: "3px",
-                    fontSize: 11,
-                    fontWeight: 600,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: "14px",
                   }}
                 >
-                  +{r.skills.length - 3}
+                  <Box
+                    sx={{ display: "flex", alignItems: "center", gap: "12px" }}
+                  >
+                    <Box
+                      sx={{
+                        width: 42,
+                        height: 42,
+                        borderRadius: "13px",
+                        background: alpha(COLORS.indigo, 0.08),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="briefcase" size={18} color={COLORS.indigo} />
+                    </Box>
+                    <Box>
+                      <Typography
+                        sx={{ fontWeight: 700, fontSize: 15, mb: "2px" }}
+                      >
+                        {interview.role}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 12, color: COLORS.textMuted }}
+                      >
+                        {interview.type} · {interview.duration} min
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box
+                    sx={{
+                      background: alpha(statusColor(interview.status), 0.1),
+                      color: statusColor(interview.status),
+                      borderRadius: "20px",
+                      px: "10px",
+                      py: "3px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {interview.status}
+                  </Box>
                 </Box>
-              )}
-            </Box>
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                pt: "14px",
-                borderTop: "1px solid rgba(0,0,0,0.05)",
-              }}
-            >
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: COLORS.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    mb: "2px",
-                  }}
-                >
-                  Candidates
-                </Typography>
-                <Typography
-                  sx={{ fontSize: 20, fontWeight: 700, color: COLORS.indigo }}
-                >
-                  {r.candidates}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "center" }}>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: COLORS.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    mb: "2px",
-                  }}
-                >
-                  Avg Score
-                </Typography>
-                <Typography
-                  sx={{ fontSize: 20, fontWeight: 700, color: COLORS.green }}
-                >
-                  {r.avgScore}
-                </Typography>
-              </Box>
-              <Box sx={{ textAlign: "right" }}>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: COLORS.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    mb: "2px",
-                  }}
-                >
-                  Opened
-                </Typography>
                 <Typography
                   sx={{
                     fontSize: 13,
-                    fontWeight: 600,
-                    color: COLORS.text,
-                    mt: "4px",
+                    color: COLORS.textMuted,
+                    lineHeight: 1.6,
+                    mb: "16px",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
                   }}
                 >
-                  {r.openedDate}
+                  {interview.description}
                 </Typography>
-              </Box>
-            </Box>
-          </SoftCard>
-        ))}
+
+                {/* Skills */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                    mb: "16px",
+                  }}
+                >
+                  {skills.slice(0, 3).map((s) => (
+                    <Box
+                      key={s}
+                      sx={{
+                        background: alpha(COLORS.indigo, 0.07),
+                        color: COLORS.indigo,
+                        borderRadius: "20px",
+                        px: "10px",
+                        py: "3px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {s}
+                    </Box>
+                  ))}
+                  {skills.length > 3 && (
+                    <Box
+                      sx={{
+                        background: "rgba(0,0,0,0.05)",
+                        color: COLORS.textMuted,
+                        borderRadius: "20px",
+                        px: "10px",
+                        py: "3px",
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    >
+                      +{skills.length - 3}
+                    </Box>
+                  )}
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    pt: "14px",
+                    borderTop: "1px solid rgba(0,0,0,0.05)",
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: COLORS.textMuted,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        mb: "2px",
+                      }}
+                    >
+                      Candidates
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 20,
+                        fontWeight: 700,
+                        color: COLORS.indigo,
+                      }}
+                    >
+                      {applicants.length}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: "right" }}>
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: COLORS.textMuted,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        mb: "2px",
+                      }}
+                    >
+                      Opened
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: COLORS.text,
+                        mt: "4px",
+                      }}
+                    >
+                      {formatDate(interview.start_date)}
+                    </Typography>
+                  </Box>
+                </Box>
+              </SoftCard>
+            );
+          })
+        )}
 
         {/* Create new role card */}
         <SoftCard
@@ -412,7 +480,11 @@ const OrgJobRoles: React.FC = () => {
             Create New Role
           </Typography>
           <Typography
-            sx={{ fontSize: 13, color: COLORS.textMuted, textAlign: "center" }}
+            sx={{
+              fontSize: 13,
+              color: COLORS.textMuted,
+              textAlign: "center",
+            }}
           >
             Set up a role and start receiving AI-screened candidates
           </Typography>

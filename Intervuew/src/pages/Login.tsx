@@ -1,9 +1,24 @@
 import React, { useState } from "react";
-import { Box, Typography, TextField, Alert } from "@mui/material";
+import {
+  Box,
+  Typography,
+  TextField,
+  Alert,
+  alpha,
+  ToggleButtonGroup,
+  ToggleButton,
+  InputAdornment,
+  IconButton,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { LogoSVG } from "../components/Icons";
-import { SoftCard, GradientButton, OrbBackground } from "../components/shared";
-import { COLORS, RADIUS } from "../theme/theme";
+import {
+  Psychology,
+  Business,
+  Person,
+  Visibility,
+  VisibilityOff,
+} from "@mui/icons-material";
+import { GradientButton } from "../components/shared";
 import { UserRole } from "../types";
 import api from "../api/api";
 
@@ -13,23 +28,12 @@ const Login: React.FC = () => {
   const [isSignup, setIsSignup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
   });
-
-  const inputSx = {
-    "& .MuiOutlinedInput-root": {
-      background: "#FAFAFA",
-      borderRadius: RADIUS.input,
-      fontSize: 14,
-    },
-    "& .MuiInputLabel-root": {
-      fontSize: 14,
-      fontFamily: "'DM Sans',sans-serif",
-    },
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,6 +42,10 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!formData.email || !formData.password) {
+      setError("Please fill in all fields.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -87,152 +95,243 @@ const Login: React.FC = () => {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        bgcolor: "#F8F9FC",
         position: "relative",
         overflow: "hidden",
       }}
     >
+      {/* Background blobs */}
       <Box
-        className="dot-grid"
-        sx={{ position: "absolute", inset: 0, opacity: 0.5 }}
+        sx={{
+          position: "absolute",
+          width: 600,
+          height: 600,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(91, 94, 246, 0.72) 0%, transparent 70%)",
+          top: "-200px",
+          right: "-200px",
+        }}
       />
-      <OrbBackground />
-      <SoftCard
-        className="fade-up"
-        sx={{ width: 416, p: "44px 42px", position: "relative" }}
+      <Box
+        sx={{
+          position: "absolute",
+          width: 400,
+          height: 400,
+          borderRadius: "50%",
+          background:
+            "radial-gradient(circle, rgba(154, 143, 255, 0.81) 0%, transparent 70%)",
+          bottom: "-150px",
+          left: "-150px",
+        }}
+      />
+
+      <Box
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          maxWidth: 440,
+          px: 3,
+        }}
       >
-        <Box sx={{ textAlign: "center", mb: "34px" }}>
-          <Box
-            onClick={() => nav("/")}
-            sx={{ cursor: "pointer", display: "inline-block" }}
-          >
-            <LogoSVG size={40} />
+        {/* Glass card */}
+        <Box
+          sx={{
+            bgcolor: "rgba(255,255,255,0.85)",
+            backdropFilter: "blur(20px)",
+            borderRadius: 4,
+            border: `1px solid ${alpha("#5B5DF6", 0.1)}`,
+            boxShadow: "0px 24px 64px rgba(91,93,246,0.1)",
+            p: 4,
+          }}
+        >
+          {/* Logo */}
+          <Box sx={{ textAlign: "center", mb: 2 }}>
+            <Box
+              sx={{
+                width: 48,
+                height: 48,
+                borderRadius: 2.5,
+                mx: "auto",
+                mb: 2,
+                background: "linear-gradient(135deg, #5B5DF6, #9B8FFF)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Psychology sx={{ color: "#fff", fontSize: 26 }} />
+            </Box>
           </Box>
-          <Typography variant="h5" sx={{ mt: "13px", mb: "6px", fontSize: 23 }}>
-            {isSignup ? "Create your account" : "Welcome back"}
+
+          <Typography
+            variant="h4"
+            sx={{ mb: 0.5, textAlign: "center", fontSize: "1.375rem" }}
+          >
+            {isSignup ? "Create account" : "Welcome back"}
           </Typography>
-          <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
+          <Typography
+            variant="body2"
+            sx={{ color: "#8B8FA8", textAlign: "center", mb: 3 }}
+          >
             {isSignup
               ? "Start your free interview journey"
               : "Sign in to continue"}
           </Typography>
-        </Box>
 
-        {/* Role Toggle */}
-        <Box
-          sx={{
-            display: "flex",
-            background: "#F3F4F6",
-            borderRadius: "14px",
-            p: "4px",
-            mb: "26px",
-          }}
-        >
-          {(
-            [
-              ["applicant", "Applicant"],
-              ["org", "Organization"],
-            ] as [UserRole, string][]
-          ).map(([v, l]) => (
-            <Box
-              key={v}
-              component="button"
-              onClick={() => setRole(v)}
+          {/* Role Toggle */}
+          <Box sx={{ mb: 3 }}>
+            <Typography
+              variant="caption"
               sx={{
-                flex: 1,
-                py: "9px",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "'DM Sans',sans-serif",
-                borderRadius: "11px",
-                fontSize: 13,
+                color: "#8B8FA8",
                 fontWeight: 600,
-                transition: "all 0.2s",
-                background: role === v ? "white" : "transparent",
-                color: role === v ? COLORS.indigo : COLORS.textMuted,
-                boxShadow: role === v ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                letterSpacing: "0.08em",
+                mb: 1,
+                display: "block",
               }}
             >
-              {l}
-            </Box>
-          ))}
-        </Box>
-
-        {/* Error */}
-        {error && (
-          <Alert
-            severity="error"
-            sx={{ mb: 2, borderRadius: RADIUS.input, fontSize: 13 }}
-          >
-            {error}
-          </Alert>
-        )}
-
-        {/* Form */}
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ display: "flex", flexDirection: "column", gap: "13px" }}
-        >
-          {isSignup && (
-            <TextField
-              label={role === "org" ? "Company Name" : "Full Name"}
+              I AM A
+            </Typography>
+            <ToggleButtonGroup
+              value={role}
+              exclusive
+              onChange={(_e, v) => v && setRole(v)}
               fullWidth
-              size="small"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              sx={inputSx}
-            />
+              sx={{
+                "& .MuiToggleButton-root": {
+                  borderRadius: "10px !important",
+                  border: `1px solid ${alpha("#5B5DF6", 0.15)} !important`,
+                  color: "#8B8FA8",
+                  textTransform: "none",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  py: 1.25,
+                  transition: "all 200ms",
+                  "&.Mui-selected": {
+                    bgcolor: alpha("#5B5DF6", 0.08),
+                    color: "#5B5DF6",
+                    fontWeight: 600,
+                    border: `1px solid ${alpha("#5B5DF6", 0.3)} !important`,
+                  },
+                },
+                gap: 1,
+              }}
+            >
+              <ToggleButton value="applicant" disableRipple>
+                <Person sx={{ fontSize: 16, mr: 1 }} />
+                Applicant
+              </ToggleButton>
+              <ToggleButton value="org" disableRipple>
+                <Business sx={{ fontSize: 16, mr: 1 }} />
+                Organization
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {error && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2.5, borderRadius: 2, fontSize: "0.8125rem" }}
+            >
+              {error}
+            </Alert>
           )}
-          <TextField
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            fullWidth
-            size="small"
-            sx={inputSx}
-          />
-          <TextField
-            label="Password"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            fullWidth
-            size="small"
-            sx={inputSx}
-          />
-          <button type="submit" style={{ all: "unset", width: "100%" }}>
-            <GradientButton fullWidth size="md" sx={{ mt: "4px", py: "13px" }}>
+
+          {/* Form */}
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{ display: "flex", flexDirection: "column" }}
+          >
+            {isSignup && (
+              <TextField
+                label={role === "org" ? "Company Name" : "Full Name"}
+                fullWidth
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                sx={{ mb: 2 }}
+              />
+            )}
+
+            <TextField
+              label="Email address"
+              fullWidth
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              sx={{ mb: 2 }}
+            />
+
+            <TextField
+              label="Password"
+              fullWidth
+              name="password"
+              type={showPassword ? "text" : "password"}
+              value={formData.password}
+              onChange={handleChange}
+              sx={{ mb: 3 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(!showPassword)}
+                      size="small"
+                      edge="end"
+                    >
+                      {showPassword ? (
+                        <VisibilityOff fontSize="small" />
+                      ) : (
+                        <Visibility fontSize="small" />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <GradientButton fullWidth size="md" sx={{ mb: 2.5, py: "13px" }}>
               {loading
                 ? "Please wait..."
                 : isSignup
                   ? "Create Account →"
                   : "Sign In →"}
             </GradientButton>
-          </button>
+          </Box>
+
+          <Typography
+            sx={{ textAlign: "center", fontSize: "0.875rem", color: "#8B8FA8" }}
+          >
+            {isSignup ? "Already have an account? " : "New to Intervuew? "}
+            <Box
+              component="span"
+              sx={{
+                color: "#5B5DF6",
+                fontWeight: 600,
+                cursor: "pointer",
+                "&:hover": { textDecoration: "underline" },
+              }}
+              onClick={() => setIsSignup(!isSignup)}
+            >
+              {isSignup ? "Sign in" : "Create account"}
+            </Box>
+          </Typography>
         </Box>
 
         <Typography
           sx={{
             textAlign: "center",
-            fontSize: 13,
-            color: COLORS.textMuted,
-            mt: "20px",
+            mt: 3,
+            fontSize: "0.75rem",
+            color: "#B0B3C6",
           }}
         >
-          {isSignup ? "Already have an account?" : "New to Intervuew?"}{" "}
-          <Box
-            component="span"
-            onClick={() => setIsSignup(!isSignup)}
-            sx={{ color: COLORS.indigo, cursor: "pointer", fontWeight: 600 }}
-          >
-            {isSignup ? "Sign in" : "Create account"}
-          </Box>
+          By continuing, you agree to our Terms & Privacy Policy
         </Typography>
-      </SoftCard>
+      </Box>
     </Box>
   );
 };

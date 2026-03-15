@@ -3,61 +3,123 @@ import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useNavigate, useParams } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
-import {
-  SoftCard,
-  GradientButton,
-  ScoreRing,
-  CategoryBar,
-  ScoreChip,
-} from "../components/shared";
+import { SoftCard, ScoreRing } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-import { CANDIDATES, STATUS_COLORS, CandidateStatus } from "../data/orgData";
-import Cookies from "js-cookie";
+import { STATUS_COLORS } from "../data/orgData";
+import api from "../api/api";
+
+type CandidateStatus = "Recommended" | "Pending" | "Declined";
+
+interface ProctoringAlert {
+  frame: number;
+  reason: string;
+}
+
+interface CandidateDetail {
+  id: string;
+  name: string;
+  interview_id: string;
+  role: string;
+  interview_date: string | null;
+  started_session: boolean | null;
+  ended_session: boolean | null;
+  score: number | null;
+  cheating_detected: boolean | null;
+  proctoring_alerts: ProctoringAlert[];
+  status: CandidateStatus;
+}
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
 const OrgCandidateDetail: React.FC = () => {
   const nav = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { applicantId } = useParams<{ applicantId: string }>();
   const [anim, setAnim] = useState(false);
-  const [status, setStatus] = useState<CandidateStatus>("Pending");
-  const [note, setNote] = useState("");
-  const orgId = Cookies.get("org_id");
-  const candidate = CANDIDATES.find((c) => c.id === id) ?? CANDIDATES[0];
+  const [candidate, setCandidate] = useState<CandidateDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [orgName, setOrgName] = useState(" ");
 
   useEffect(() => {
-    setAnim(false);
-    setStatus(candidate.status);
-    setNote(candidate.notes);
-    const t = setTimeout(() => setAnim(true), 300);
-    return () => clearTimeout(t);
-  }, [id]);
+    const fetchAll = async () => {
+      try {
+        const [detailRes, nameRes] = await Promise.all([
+          api.get(`/Organization/candidates/detail/${applicantId}`),
+          api.get("/Organization"),
+        ]);
+        setCandidate(detailRes.data);
+        setOrgName(nameRes.data.name);
+        setTimeout(() => setAnim(true), 300);
+      } catch {
+        nav("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, [applicantId]);
 
-  const statusOptions: CandidateStatus[] = [
-    "Recommended",
-    "Review",
-    "Pending",
-    "Declined",
-  ];
+  if (loading || !candidate) {
+    return (
+      <SidebarLayout
+        userLabel={orgName}
+        userInitial={orgName?.[0] ?? "O"}
+        navItems={[
+          { icon: "home", label: "Overview", to: `/org` },
+          { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
+          {
+            icon: "users",
+            label: "Candidates",
+            active: true,
+            to: `/org/applicants`,
+          },
+          { icon: "chart", label: "Analytics", to: `/org/analytics` },
+        ]}
+      >
+        <Typography
+          sx={{
+            color: COLORS.textMuted,
+            fontSize: 14,
+            mt: "40px",
+            textAlign: "center",
+          }}
+        >
+          Loading candidate...
+        </Typography>
+      </SidebarLayout>
+    );
+  }
+
+  const alerts = candidate.proctoring_alerts ?? [];
 
   return (
     <SidebarLayout
-      userLabel="Acme Corp"
-      userInitial="A"
+      userLabel={orgName}
+      userInitial={orgName?.[0] ?? "O"}
       navItems={[
-        { icon: "home", label: "Overview", active: true, to: `/org` },
+        { icon: "home", label: "Overview", to: `/org` },
+        { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
         {
-          icon: "briefcase",
-          label: "Job Roles",
-          to: `/org/interview`,
+          icon: "users",
+          label: "Candidates",
+          active: true,
+          to: `/org/applicants`,
         },
-        { icon: "users", label: "Candidates", to: `/org/applicants` },
         { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
     >
-      {/* Header */}
+      {/* Back + Header */}
       <Box className="fade-up" sx={{ mb: "28px" }}>
         <Box
           component="button"
-          onClick={() => nav("/org/candidates")}
+          onClick={() => nav("/org/applicants")}
           sx={{
             background: "none",
             border: "none",
@@ -75,112 +137,108 @@ const OrgCandidateDetail: React.FC = () => {
         >
           ← Back to Candidates
         </Box>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 22,
-                fontWeight: 700,
-                color: "white",
-              }}
-            >
-              {candidate.name[0]}
-            </Box>
-            <Box>
-              <Typography variant="h4" sx={{ fontSize: 24, mb: "4px" }}>
-                {candidate.name}
-              </Typography>
-              <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
-                {candidate.role} · {candidate.location} · {candidate.experience}{" "}
-                experience
-              </Typography>
-            </Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 22,
+              fontWeight: 700,
+              color: "white",
+            }}
+          >
+            {candidate.name[0]}
           </Box>
-          <Box sx={{ display: "flex", gap: "10px" }}>
-            <GradientButton
-              size="sm"
-              variant="ghost"
-              onClick={() => window.open(`mailto:${candidate.email}`)}
-            >
-              Email Candidate
-            </GradientButton>
-            <GradientButton size="sm" onClick={() => nav("/interview")}>
-              Re-interview
-            </GradientButton>
+          <Box>
+            <Typography variant="h4" sx={{ fontSize: 24, mb: "4px" }}>
+              {candidate.name}
+            </Typography>
+            <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
+              {candidate.role} · Interviewed{" "}
+              {formatDate(candidate.interview_date)}
+            </Typography>
           </Box>
         </Box>
       </Box>
 
-      {/* Contact + Status bar */}
+      {/* Info bar */}
       <SoftCard
         className="fade-up-1"
         sx={{
           p: "20px 26px",
           mb: "18px",
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          gap: "28px",
           flexWrap: "wrap",
-          gap: "16px",
+          alignItems: "center",
         }}
       >
-        <Box sx={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-          {[
-            { icon: "mail", val: candidate.email },
-            { icon: "phone", val: candidate.phone },
-            { icon: "calendar", val: `Interviewed ${candidate.date}` },
-          ].map((item) => (
-            <Box
-              key={item.val}
-              sx={{ display: "flex", alignItems: "center", gap: "7px" }}
-            >
-              <Icon name={item.icon} size={14} color={COLORS.textMuted} />
-              <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+        {[
+          {
+            icon: "calendar",
+            label: "Interview Date",
+            val: formatDate(candidate.interview_date),
+          },
+          {
+            icon: "check",
+            label: "Session",
+            val: candidate.ended_session
+              ? "Completed"
+              : candidate.started_session
+                ? "In Progress"
+                : "Not Started",
+          },
+        ].map((item) => (
+          <Box
+            key={item.label}
+            sx={{ display: "flex", alignItems: "center", gap: "10px" }}
+          >
+            <Icon name={item.icon} size={14} color={COLORS.textMuted} />
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: COLORS.textLight,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                }}
+              >
+                {item.label}
+              </Typography>
+              <Typography
+                sx={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}
+              >
                 {item.val}
               </Typography>
             </Box>
-          ))}
-        </Box>
-        {/* Status changer */}
-        <Box sx={{ display: "flex", gap: "6px" }}>
-          {statusOptions.map((s) => (
-            <Box
-              key={s}
-              onClick={() => setStatus(s)}
-              sx={{
-                px: "12px",
-                py: "5px",
-                borderRadius: "20px",
-                cursor: "pointer",
-                fontSize: 12,
-                fontWeight: 700,
-                transition: "all 0.15s",
-                background:
-                  status === s ? alpha(STATUS_COLORS[s], 0.15) : "transparent",
-                color: status === s ? STATUS_COLORS[s] : COLORS.textMuted,
-                border: `1px solid ${status === s ? alpha(STATUS_COLORS[s], 0.3) : "rgba(0,0,0,0.08)"}`,
-              }}
-            >
-              {s}
-            </Box>
-          ))}
+          </Box>
+        ))}
+
+        {/* Status badge */}
+        <Box sx={{ ml: "auto" }}>
+          <Box
+            sx={{
+              background: alpha(STATUS_COLORS[candidate.status], 0.1),
+              color: STATUS_COLORS[candidate.status],
+              borderRadius: "20px",
+              px: "14px",
+              py: "5px",
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            {candidate.status}
+          </Box>
         </Box>
       </SoftCard>
 
-      {/* Score + Breakdown */}
+      {/* Score + Cheating indicator */}
       <Box
         className="fade-up-2"
         sx={{
@@ -190,6 +248,7 @@ const OrgCandidateDetail: React.FC = () => {
           mb: "18px",
         }}
       >
+        {/* Score ring */}
         <SoftCard
           sx={{
             p: "30px",
@@ -211,182 +270,198 @@ const OrgCandidateDetail: React.FC = () => {
           >
             Overall Score
           </Typography>
-          <ScoreRing score={candidate.score} animated={anim} />
-          <Box
+          {candidate.score !== null ? (
+            <ScoreRing score={candidate.score} animated={anim} />
+          ) : (
+            <Typography
+              sx={{ fontSize: 28, fontWeight: 700, color: COLORS.textLight }}
+            >
+              —
+            </Typography>
+          )}
+        </SoftCard>
+
+        {/* Cheating indicator */}
+        <SoftCard sx={{ p: "28px 32px" }}>
+          <Typography
             sx={{
-              mt: "12px",
-              borderRadius: "20px",
-              px: "14px",
-              py: "5px",
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: 700,
-              background: alpha(STATUS_COLORS[candidate.status], 0.1),
-              color: STATUS_COLORS[candidate.status],
+              color: COLORS.textMuted,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              mb: "16px",
             }}
           >
-            {candidate.status}
-          </Box>
-        </SoftCard>
-        <SoftCard sx={{ p: "28px 32px" }}>
-          <Typography variant="h6" sx={{ fontSize: 15, mb: "20px" }}>
-            Skill Breakdown
+            Cheating Detection
           </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-            {candidate.breakdown.map((b, i) => (
-              <CategoryBar
-                key={i}
-                label={b.label}
-                score={b.score}
-                color={b.color}
-                animated={anim}
-                delay={i * 0.1}
+
+          {candidate.cheating_detected === null ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Box
+                sx={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: "50%",
+                  background: COLORS.textLight,
+                }}
               />
-            ))}
-          </Box>
+              <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
+                No proctoring data available
+              </Typography>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+                p: "16px 20px",
+                borderRadius: "14px",
+                background: candidate.cheating_detected
+                  ? alpha("#ef4444", 0.06)
+                  : alpha(COLORS.green, 0.06),
+                border: `1px solid ${
+                  candidate.cheating_detected
+                    ? alpha("#ef4444", 0.2)
+                    : alpha(COLORS.green, 0.2)
+                }`,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "12px",
+                  background: candidate.cheating_detected
+                    ? alpha("#ef4444", 0.12)
+                    : alpha(COLORS.green, 0.12),
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  flexShrink: 0,
+                }}
+              >
+                {candidate.cheating_detected ? "⚠️" : "✓"}
+              </Box>
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: candidate.cheating_detected
+                      ? "#ef4444"
+                      : COLORS.green,
+                    mb: "2px",
+                  }}
+                >
+                  {candidate.cheating_detected
+                    ? "Cheating Detected"
+                    : "No Cheating Detected"}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                  {alerts.length > 0
+                    ? `${alerts.length} alert${alerts.length > 1 ? "s" : ""} flagged during session`
+                    : "Session completed with no flags"}
+                </Typography>
+              </Box>
+            </Box>
+          )}
         </SoftCard>
       </Box>
 
-      {/* Per question + Notes */}
-      <Box
-        className="fade-up-3"
-        sx={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "18px" }}
-      >
-        <SoftCard sx={{ p: "26px 30px" }}>
-          <Typography variant="h6" sx={{ fontSize: 15, mb: "18px" }}>
-            Interview Responses
+      {/* Proctoring alerts table */}
+      {alerts.length > 0 && (
+        <SoftCard className="fade-up-3" sx={{ p: "26px 30px" }}>
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: COLORS.textMuted,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              mb: "16px",
+            }}
+          >
+            Proctoring Alerts · {alerts.length} flagged
           </Typography>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {candidate.questions.map((q, i) => (
+
+          {/* Table header */}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "140px 1fr",
+              gap: "12px",
+              p: "10px 16px",
+              borderRadius: "10px 10px 0 0",
+              background: alpha(COLORS.indigo, 0.04),
+              borderBottom: "1px solid rgba(0,0,0,0.06)",
+              fontSize: 11,
+              fontWeight: 700,
+              color: COLORS.textLight,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Box>Frame</Box>
+            <Box>Reason</Box>
+          </Box>
+
+          {/* Table rows */}
+          <Box
+            sx={{
+              border: "1px solid rgba(0,0,0,0.06)",
+              borderTop: "none",
+              borderRadius: "0 0 10px 10px",
+              overflow: "hidden",
+            }}
+          >
+            {alerts.map((alert, i) => (
               <Box
                 key={i}
                 sx={{
-                  display: "flex",
-                  gap: "14px",
-                  alignItems: "flex-start",
-                  p: "14px",
-                  borderRadius: "13px",
-                  background: alpha(COLORS.indigo, 0.03),
-                  border: `1px solid ${alpha(COLORS.indigo, 0.06)}`,
+                  display: "grid",
+                  gridTemplateColumns: "140px 1fr",
+                  gap: "12px",
+                  p: "12px 16px",
+                  alignItems: "center",
+                  borderBottom:
+                    i < alerts.length - 1
+                      ? "1px solid rgba(0,0,0,0.04)"
+                      : "none",
+                  background:
+                    i % 2 === 0 ? "transparent" : alpha(COLORS.indigo, 0.015),
+                  "&:hover": { background: alpha("#ef4444", 0.04) },
+                  transition: "background 0.15s",
                 }}
               >
                 <Box
                   sx={{
-                    width: 26,
-                    height: 26,
+                    background: alpha("#ef4444", 0.1),
+                    color: "#ef4444",
                     borderRadius: "8px",
-                    background: alpha(COLORS.indigo, 0.1),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    px: "10px",
+                    py: "4px",
                     fontSize: 11,
                     fontWeight: 700,
-                    color: COLORS.indigo,
-                    flexShrink: 0,
+                    fontFamily: "'DM Mono', monospace",
+                    display: "inline-block",
+                    width: "fit-content",
                   }}
                 >
-                  {i + 1}
+                  Frame {alert.frame}
                 </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "3px" }}>
-                    {q.q}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      color: COLORS.textMuted,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {q.feedback}
-                  </Typography>
-                </Box>
-                <ScoreChip score={q.score} />
+                <Typography
+                  sx={{ fontSize: 13, color: COLORS.text, lineHeight: 1.5 }}
+                >
+                  {alert.reason}
+                </Typography>
               </Box>
             ))}
           </Box>
         </SoftCard>
-
-        {/* Notes + actions */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          <SoftCard sx={{ p: "24px 26px" }}>
-            <Typography variant="h6" sx={{ fontSize: 14, mb: "12px" }}>
-              Recruiter Notes
-            </Typography>
-            <Box
-              component="textarea"
-              value={note}
-              onChange={(e: any) => setNote(e.target.value)}
-              rows={5}
-              sx={{
-                width: "100%",
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: "12px",
-                padding: "10px 14px",
-                fontSize: 13,
-                fontFamily: "'DM Sans',sans-serif",
-                background: COLORS.bg,
-                color: COLORS.text,
-                outline: "none",
-                resize: "none",
-                lineHeight: 1.6,
-                "&:focus": {
-                  borderColor: COLORS.indigo,
-                  background: COLORS.white,
-                },
-              }}
-            />
-            <Box sx={{ mt: "10px" }}>
-              <GradientButton size="sm" fullWidth onClick={() => {}}>
-                Save Note
-              </GradientButton>
-            </Box>
-          </SoftCard>
-
-          <SoftCard sx={{ p: "22px 24px" }}>
-            <Typography variant="h6" sx={{ fontSize: 14, mb: "14px" }}>
-              Actions
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <GradientButton
-                fullWidth
-                size="sm"
-                onClick={() => setStatus("Recommended")}
-                variant="success"
-              >
-                ✓ Mark as Recommended
-              </GradientButton>
-              <GradientButton
-                fullWidth
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  nav(
-                    `/org/roles/${CANDIDATES.find((c) => c.id === id)?.roleId}`,
-                  )
-                }
-              >
-                View Job Role
-              </GradientButton>
-              <GradientButton
-                fullWidth
-                size="sm"
-                variant="ghost"
-                onClick={() => nav("/interview")}
-              >
-                Schedule Re-interview
-              </GradientButton>
-              <GradientButton
-                fullWidth
-                size="sm"
-                variant="danger"
-                onClick={() => setStatus("Declined")}
-              >
-                Decline Candidate
-              </GradientButton>
-            </Box>
-          </SoftCard>
-        </Box>
-      </Box>
+      )}
     </SidebarLayout>
   );
 };

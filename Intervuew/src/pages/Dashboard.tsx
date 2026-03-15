@@ -1,16 +1,44 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
-import { SoftCard, GradientButton, ScoreChip } from "../components/shared";
+import { SoftCard, ScoreChip } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS, RADIUS } from "../theme/theme";
-import { AppliedRole } from "@/types";
-import { ALL_SESSIONS } from "../data/sessions";
-import Cookies from "js-cookie";
 import api from "../api/api";
+
+interface Interview {
+  id: string;
+  role: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  duration: number;
+  status: string;
+  type: string;
+}
+
+interface AppliedRole {
+  applicant_id: string;
+  interview: Interview;
+}
+
+interface PrepSession {
+  applicant_id: string;
+  interview: Interview;
+  score: number | null;
+  started_session: boolean | null;
+  ended_session: boolean | null;
+  interview_date: string | null;
+}
+
+const formatDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
 const Dashboard: React.FC = () => {
   const nav = useNavigate();
@@ -18,71 +46,67 @@ const Dashboard: React.FC = () => {
   const greeting =
     h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
 
-  const recentSessions = ALL_SESSIONS.slice(0, 3);
-  const totalSessions = ALL_SESSIONS.length;
-  const avgScore = Math.round(
-    ALL_SESSIONS.reduce((a, s) => a + s.score, 0) / ALL_SESSIONS.length,
-  );
-
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState(" ");
+  const [appliedRoles, setAppliedRoles] = useState<AppliedRole[]>([]);
+  const [prepSessions, setPrepSessions] = useState<PrepSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMe = async () => {
       try {
-        const response = await api.get("/User/me");
-        const nameRequest = await api.get("/User");
-
-        setUserId(response.data.id);
-        setUserName(nameRequest.data.name);
-        console.log("user_id cookie:", Cookies.get("user_id"));
-      } catch (err) {
+        const [meRes, nameRes] = await Promise.all([
+          api.get("/User/me"),
+          api.get("/User"),
+        ]);
+        setUserId(meRes.data.id);
+        setUserName(nameRes.data.name);
+      } catch {
         nav("/login");
       }
     };
     fetchMe();
   }, []);
 
-  const [appliedRoles, setAppliedRoles] = useState<AppliedRole[]>([]);
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      hour12: true,
-    });
-  };
-
   useEffect(() => {
-    const getApplicantIdAndInterviews = async () => {
+    if (!userId) return;
+    const fetchAll = async () => {
       try {
-        console.log(userId);
-        const reponse = await api.get(
-          `http://localhost:8000/User/${userId}/applicant/interviews`,
-        );
-        console.log("applied roles: ", reponse.data);
-        const data = await reponse.data;
-        setAppliedRoles(data);
-        console.log(data);
-      } catch (err) {}
+        const [appliedRes, prepRes] = await Promise.all([
+          api.get(`/User/${userId}/applicant/interviews`),
+          api.get(`/User/${userId}/prep/interviews`),
+        ]);
+        console.log("appliedRoles raw:", appliedRes.data);
+        console.log("prepSessions raw:", prepRes.data);
+        setAppliedRoles(appliedRes.data ?? []);
+        setPrepSessions(prepRes.data ?? []);
+      } catch (err) {
+        console.error("fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
     };
-
-    getApplicantIdAndInterviews();
+    fetchAll();
   }, [userId]);
+
+  const completedSessions = prepSessions.filter((s) => s.ended_session);
+  const totalSessions = prepSessions.length;
+  const scoresOnly = completedSessions
+    .map((s) => s.score)
+    .filter((s): s is number => s !== null && s !== undefined);
+  const avgScore =
+    scoresOnly.length > 0
+      ? Math.round(scoresOnly.reduce((a, b) => a + b, 0) / scoresOnly.length)
+      : null;
 
   return (
     <SidebarLayout
       userLabel={userName}
-      userInitial={userName[0]}
+      userInitial={userName?.[0] ?? "U"}
       navItems={[
         { icon: "home", label: "Dashboard", active: true },
-        { icon: "mic", label: "Start Interview", to: "/interview" },
         { icon: "clock", label: "History", to: "/history" },
         { icon: "chart", label: "Reports", to: "/reports" },
-        { icon: "settings", label: "Settings", to: "/settings" },
       ]}
     >
       {/* Header */}
@@ -156,23 +180,22 @@ const Dashboard: React.FC = () => {
               lineHeight: 1.5,
             }}
           >
-            or Practice with AI-powered real-time questions tailored to your
-            role.
+            Practice with AI-powered real-time questions tailored to your role.
           </Typography>
         </Box>
 
         {/* Stats */}
         {[
           {
-            label: "Total Sessions",
-            val: String(totalSessions),
-            sub: "+2 this week",
+            label: "Prep Sessions",
+            val: loading ? "—" : String(totalSessions),
+            sub: `${completedSessions.length} completed`,
             color: COLORS.indigo,
           },
           {
             label: "Avg. Score",
-            val: String(avgScore),
-            sub: "↑ Improving",
+            val: loading ? "—" : avgScore !== null ? String(avgScore) : "—",
+            sub: avgScore !== null ? "↑ Keep going" : "No scores yet",
             color: COLORS.green,
           },
         ].map((c) => (
@@ -210,78 +233,108 @@ const Dashboard: React.FC = () => {
         ))}
       </Box>
 
-      {appliedRoles.map((role, index) => (
-        <SoftCard
-          key={index}
+      {/* Applied Roles */}
+      <Box className="fade-up-2" sx={{ mb: "28px" }}>
+        <Typography variant="h6" sx={{ fontSize: 15, mb: "14px" }}>
+          Applied Roles
+        </Typography>
+        <Box
           sx={{
-            p: "20px 22px",
-            cursor: "pointer",
-            maxWidth: { xs: "100%", sm: 360, md: 400 },
-          }}
-          onClick={async () => {
-            try {
-              await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: true,
-              });
-              nav(`/interview/${role.applicant_id}/${role.interview.id}`);
-            } catch (err) {
-              const error = err as DOMException;
-              if (error.name === "NotAllowedError") {
-                alert(
-                  "Microphone access was denied. Please allow it in your browser settings.",
-                );
-              } else if (error.name === "NotFoundError") {
-                alert("No microphone found on this device.");
-              } else {
-                alert("Could not access microphone.");
-              }
-            }
+            display: "grid",
+            gridTemplateColumns: "repeat(3,1fr)",
+            gap: "13px",
           }}
         >
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              mb: "12px",
-            }}
-          >
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                borderRadius: "11px",
-                background: alpha(COLORS.indigo, 0.08),
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Icon name="briefcase" size={15} color={COLORS.indigo} />
-            </Box>
-          </Box>
+          {appliedRoles
+            .filter((r) => r?.interview)
+            .map((role, index) => (
+              <SoftCard
+                key={index}
+                sx={{ p: "20px 22px", cursor: "pointer" }}
+                onClick={async () => {
+                  try {
+                    await navigator.mediaDevices.getUserMedia({
+                      audio: true,
+                      video: true,
+                    });
+                    nav(`/interview/${role.applicant_id}/${role.interview.id}`);
+                  } catch (err) {
+                    const error = err as DOMException;
+                    if (error.name === "NotAllowedError") {
+                      alert(
+                        "Microphone access was denied. Please allow it in your browser settings.",
+                      );
+                    } else if (error.name === "NotFoundError") {
+                      alert("No microphone found on this device.");
+                    } else {
+                      alert("Could not access microphone.");
+                    }
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: "12px",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "11px",
+                      background: alpha(COLORS.indigo, 0.08),
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon name="briefcase" size={15} color={COLORS.indigo} />
+                  </Box>
+                  <Box
+                    sx={{
+                      background:
+                        role.interview.status === "active"
+                          ? alpha(COLORS.green, 0.1)
+                          : alpha(COLORS.textLight, 0.1),
+                      color:
+                        role.interview.status === "active"
+                          ? COLORS.green
+                          : COLORS.textLight,
+                      borderRadius: "20px",
+                      px: "10px",
+                      py: "3px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {role.interview.status}
+                  </Box>
+                </Box>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: 15,
+                    letterSpacing: "-0.01em",
+                    mb: "4px",
+                  }}
+                >
+                  {role.interview.role}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                  {formatDate(role.interview.start_date)} →{" "}
+                  {formatDate(role.interview.end_date)}
+                </Typography>
+              </SoftCard>
+            ))}
+        </Box>
+      </Box>
 
-          <Typography
-            sx={{
-              fontWeight: 600,
-              fontSize: 15,
-              letterSpacing: "-0.01em",
-              mb: "4px",
-            }}
-          >
-            {role.interview.role}
-          </Typography>
-
-          <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
-            {formatDate(role.interview.start_date)} to{" "}
-            {formatDate(role.interview.end_date)}
-          </Typography>
-        </SoftCard>
-      ))}
-
-      {/* Recent sessions */}
-      <Box className="fade-up-2">
+      {/* Prep Sessions */}
+      <Box className="fade-up-3">
         <Box
           sx={{
             display: "flex",
@@ -290,11 +343,11 @@ const Dashboard: React.FC = () => {
             mb: "14px",
           }}
         >
-          <Typography variant="h6" sx={{ fontSize: 16 }}>
-            Recent Sessions
+          <Typography variant="h6" sx={{ fontSize: 15 }}>
+            Prep Sessions
           </Typography>
           <Typography
-            onClick={() => nav("/history")}
+            onClick={() => nav("/prep_interview/new")}
             sx={{
               fontSize: 13,
               color: COLORS.indigo,
@@ -303,62 +356,184 @@ const Dashboard: React.FC = () => {
               "&:hover": { textDecoration: "underline" },
             }}
           >
-            View all →
+            + New Session
           </Typography>
         </Box>
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: "13px",
-          }}
-        >
-          {recentSessions.map((s) => (
+        {prepSessions.length === 0 && !loading ? (
+          <SoftCard
+            sx={{
+              p: "40px",
+              textAlign: "center",
+              cursor: "pointer",
+              border: "2px dashed rgba(91,93,246,0.2)",
+              background: alpha(COLORS.indigo, 0.02),
+            }}
+            onClick={() => nav("/prep_interview/new")}
+          >
+            <Box
+              sx={{
+                width: 46,
+                height: 46,
+                borderRadius: "14px",
+                background: alpha(COLORS.indigo, 0.1),
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                mx: "auto",
+                mb: "10px",
+              }}
+            >
+              <Icon name="plus" size={22} color={COLORS.indigo} />
+            </Box>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: COLORS.indigo,
+                mb: "4px",
+              }}
+            >
+              Create Your First Prep Session
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+              Set up a role and practice with AI-generated questions.
+            </Typography>
+          </SoftCard>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3,1fr)",
+              gap: "13px",
+            }}
+          >
+            {prepSessions
+              .filter((s) => s?.interview)
+              .map((s) => (
+                <SoftCard
+                  key={s.applicant_id}
+                  sx={{ p: "20px 22px", cursor: "pointer" }}
+                  onClick={async () => {
+                    try {
+                      await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: true,
+                      });
+                      nav(`/interview/${s.applicant_id}/${s.interview.id}`);
+                    } catch (err) {
+                      const error = err as DOMException;
+                      if (error.name === "NotAllowedError") {
+                        alert(
+                          "Microphone access was denied. Please allow it in your browser settings.",
+                        );
+                      } else if (error.name === "NotFoundError") {
+                        alert("No microphone found on this device.");
+                      } else {
+                        alert("Could not access microphone.");
+                      }
+                    }
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      mb: "12px",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "11px",
+                        background: alpha(COLORS.indigo, 0.08),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="briefcase" size={15} color={COLORS.indigo} />
+                    </Box>
+                    {s.score !== null && s.score !== undefined ? (
+                      <ScoreChip score={s.score} />
+                    ) : (
+                      <Box
+                        sx={{
+                          background: s.started_session
+                            ? alpha(COLORS.amber, 0.1)
+                            : alpha(COLORS.textLight, 0.1),
+                          color: s.started_session
+                            ? COLORS.amber
+                            : COLORS.textLight,
+                          borderRadius: "20px",
+                          px: "10px",
+                          py: "3px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {s.started_session ? "In Progress" : "Not Started"}
+                      </Box>
+                    )}
+                  </Box>
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: 15,
+                      letterSpacing: "-0.01em",
+                      mb: "4px",
+                    }}
+                  >
+                    {s.interview.role}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                    {s.interview_date
+                      ? formatDate(s.interview_date)
+                      : formatDate(s.interview.start_date)}{" "}
+                    · {s.interview.duration} min
+                  </Typography>
+                </SoftCard>
+              ))}
+
+            {/* Create new */}
             <SoftCard
-              key={s.id}
-              sx={{ p: "20px 22px", cursor: "pointer" }}
-              onClick={() => nav(`/report/${s.id}`)}
+              sx={{
+                p: "20px 22px",
+                cursor: "pointer",
+                border: "2px dashed rgba(91,93,246,0.2)",
+                background: alpha(COLORS.indigo, 0.02),
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                minHeight: 140,
+              }}
+              onClick={() => nav("/prep_interview/new")}
             >
               <Box
                 sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "11px",
+                  background: alpha(COLORS.indigo, 0.1),
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  mb: "12px",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "11px",
-                    background: alpha(COLORS.indigo, 0.08),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Icon name="briefcase" size={15} color={COLORS.indigo} />
-                </Box>
-                <ScoreChip score={s.score} />
+                <Icon name="plus" size={18} color={COLORS.indigo} />
               </Box>
               <Typography
-                sx={{
-                  fontWeight: 600,
-                  fontSize: 15,
-                  letterSpacing: "-0.01em",
-                  mb: "4px",
-                }}
+                sx={{ fontSize: 13, fontWeight: 600, color: COLORS.indigo }}
               >
-                {s.role}
-              </Typography>
-              <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
-                {s.date} · {s.duration} · {s.mode}
+                New Prep Session
               </Typography>
             </SoftCard>
-          ))}
-        </Box>
+          </Box>
+        )}
       </Box>
     </SidebarLayout>
   );
