@@ -1,31 +1,37 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Slider } from "@mui/material";
 import PhoneIcon from "@mui/icons-material/Phone";
-import VideocamIcon from "@mui/icons-material/Videocam";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
+import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import ChatIcon from "@mui/icons-material/Chat";
+import CloseIcon from "@mui/icons-material/Close";
 import { Icon, LogoSVG } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-import {
-  ApplicantDict,
-  InterviewDict,
-  InterviewStatus,
-  TranscriptEntry,
-} from "../types";
-import { esbuildVersion } from "vite";
+import { ApplicantDict, InterviewDict, TranscriptEntry } from "../types";
 import api from "../api/api";
+
+const NATIVE_SAMPLE_RATE = 48000;
+const TARGET_SAMPLE_RATE = 16000;
+const DOWNSAMPLE_RATIO = NATIVE_SAMPLE_RATE / TARGET_SAMPLE_RATE;
+const CHUNK_SAMPLES = TARGET_SAMPLE_RATE / 10;
+
+function downsampleBuffer(buffer: Float32Array, ratio: number): Float32Array {
+  const outputLength = Math.floor(buffer.length / ratio);
+  const result = new Float32Array(outputLength);
+  for (let i = 0; i < outputLength; i++) {
+    result[i] = buffer[Math.floor(i * ratio)];
+  }
+  return result;
+}
 
 const Interview: React.FC = () => {
   const nav = useNavigate();
-  const [status, setStatus] = useState<InterviewStatus>("speaking");
   const [speaking, setSpeaking] = useState(false);
   const [timer, setTimer] = useState(0);
   const [micActive, setMicActive] = useState(true);
-  const [qIdx, setQIdx] = useState(2);
   const [applicant, setApplicant] = useState<ApplicantDict | null>(null);
   const [interview, setInterview] = useState<InterviewDict | null>(null);
-  const totalQ = 8;
   const params = useParams();
   const applicantId = params.applicationId;
   const interviewId = params.interviewId;
@@ -46,73 +52,101 @@ const Interview: React.FC = () => {
   const [startVideoRequested, setStartVideoRequested] = useState(false);
   const lastSentRef = useRef<number>(0);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isClosed, setIsClosed] = useState(false);
+  const [closedReason, setClosedReason] =
+    useState<string>("Session has closed");
+  const pcmBufferRef = useRef<Int16Array[]>([]);
+  const bufferedSamplesRef = useRef<number>(0);
+
+  const [volume, setVolume] = useState(1);
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const response = await api.get("/User/me");
-        setUserId(response.data);
-      } catch (err) {
-        // cookie invalid or expired, redirect to login
-        nav("/login");
-      }
-    };
-    fetchMe();
+    const userId = localStorage.getItem("user_id");
+    if (!userId) {
+      nav("/login");
+      return;
+    }
+    setUserId(userId);
   }, []);
+
+  const handleVolumeChange = (_: Event, value: number | number[]) => {
+    const v = value as number;
+    setVolume(v);
+    if (gainNodeRef.current) gainNodeRef.current.gain.value = v;
+  };
 
   const playPCM = (float32: Float32Array) => {
     if (!audioContextRef.current) return;
-
     const SERVER_SAMPLE_RATE = 24000;
-
     const audioBuffer = audioContextRef.current.createBuffer(
       1,
       float32.length,
       SERVER_SAMPLE_RATE,
     );
-
     audioBuffer.copyToChannel(new Float32Array(float32), 0);
-
     const ctx = audioContextRef.current;
     const currentTime = ctx.currentTime;
-
     if (nextPlayTimeRef.current < currentTime) {
       nextPlayTimeRef.current = currentTime;
     }
-
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
-    source.connect(ctx.destination);
+    if (gainNodeRef.current) {
+      source.connect(gainNodeRef.current);
+    } else {
+      source.connect(ctx.destination);
+    }
     source.start(nextPlayTimeRef.current);
-
     nextPlayTimeRef.current += audioBuffer.duration;
   };
-  const convertFloat32ToPCM = (inputData: Float32Array): ArrayBuffer => {
+
+  const convertFloat32ToPCM = (inputData: Float32Array): Int16Array => {
     const pcm16 = new Int16Array(inputData.length);
-
     for (let i = 0; i < inputData.length; i++) {
-      pcm16[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7fff;
+      const s = Math.max(-1, Math.min(1, inputData[i]));
+      pcm16[i] = s * 32767;
     }
+    return pcm16;
+  };
 
-    return pcm16.buffer;
+  const flushAudioChunk = (ws: WebSocket) => {
+    const merged = new Int16Array(bufferedSamplesRef.current);
+    let offset = 0;
+    for (const chunk of pcmBufferRef.current) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    pcmBufferRef.current = [];
+    bufferedSamplesRef.current = 0;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(merged.buffer);
+    }
   };
 
   const startAudioInterview = async () => {
-    // 1. AudioContext
     if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = new AudioContext({
+        sampleRate: NATIVE_SAMPLE_RATE,
+      });
     }
     await audioContextRef.current.resume();
 
-    // 2. Create WebSocket here only
+    gainNodeRef.current = audioContextRef.current.createGain();
+    gainNodeRef.current.gain.value = volume;
+    gainNodeRef.current.connect(audioContextRef.current.destination);
+
     const ws = new WebSocket(
-      `ws://localhost:8000/interview/start/${interviewId}/${applicantId}`,
+      `wss://interview-agent-435239562393.us-central1.run.app/interview/start/${interviewId}/${applicantId}`,
     );
     wsRef.current.audio = ws;
     ws.binaryType = "arraybuffer";
 
-    // 3. Wait for connection before doing anything
     await new Promise<void>((resolve, reject) => {
       ws.onopen = () => {
         setConnected(true);
@@ -121,22 +155,21 @@ const Interview: React.FC = () => {
       ws.onerror = () => reject(new Error("WebSocket failed to connect"));
     });
 
-    // 4. Now safe to use
     ws.onmessage = (event) => {
       if (typeof event.data === "string") {
         const msg = JSON.parse(event.data);
-        console.log(JSON.parse(event.data));
         if (msg.turn_complete) {
           nextPlayTimeRef.current = 0;
           setSpeaking(false);
-          console.log(
-            "turn complete, ws state:",
-            wsRef.current.audio?.readyState,
-          );
+        }
+        if (msg.role && msg.text) {
+          setTranscript((prev) => [
+            ...prev,
+            { who: msg.role === "candidate" ? "You" : "AI", text: msg.text },
+          ]);
         }
       } else {
         const int16 = new Int16Array(event.data);
-        console.log("received audio bytes:", event.data.byteLength);
         const float32 = new Float32Array(int16.length);
         for (let i = 0; i < int16.length; i++) {
           float32[i] = int16[i] / 32767;
@@ -146,9 +179,13 @@ const Interview: React.FC = () => {
       }
     };
 
-    ws.onclose = () => setConnected(false);
+    ws.onclose = (event) => {
+      setConnected(false);
+      setClosedReason(event.reason || "Session has ended.");
+      setIsClosed(true);
+      stopRecording();
+    };
 
-    // 5. Start audio worklet
     await audioContextRef.current.audioWorklet.addModule(
       `${window.location.origin}/pcm-recorder-processor.js`,
     );
@@ -158,7 +195,7 @@ const Interview: React.FC = () => {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: 16000,
+        sampleRate: NATIVE_SAMPLE_RATE,
       },
     });
     const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -173,11 +210,15 @@ const Interview: React.FC = () => {
     ws.send(JSON.stringify({ mime_type: "audio/pcm" }));
 
     audioRecorderNode.port.onmessage = (event) => {
-      console.log("audio data from worklet:", event.data);
-      const data = convertFloat32ToPCM(event.data);
-      if (ws.readyState === WebSocket.OPEN) {
-        console.log("sending to server:", data.byteLength);
-        ws.send(data);
+      const downsampled = downsampleBuffer(
+        event.data as Float32Array,
+        DOWNSAMPLE_RATIO,
+      );
+      const pcm = convertFloat32ToPCM(downsampled);
+      pcmBufferRef.current.push(pcm);
+      bufferedSamplesRef.current += pcm.length;
+      if (bufferedSamplesRef.current >= CHUNK_SAMPLES) {
+        flushAudioChunk(ws);
       }
     };
   };
@@ -194,7 +235,7 @@ const Interview: React.FC = () => {
       });
 
       const ws = new WebSocket(
-        `ws://localhost:8000/interview/visual_interview/start/${interviewId}/${applicantId}`,
+        `wss://interview-agent-435239562393.us-central1.run.app/interview/visual_interview/start/${interviewId}/${applicantId}`,
       );
       wsRef.current.video = ws;
       ws.binaryType = "arraybuffer";
@@ -204,9 +245,13 @@ const Interview: React.FC = () => {
           setConnected(true);
           resolve();
         };
-        ws.onerror = () => reject(new Error("WebSocket failed to connect"));
+        ws.onerror = () => {
+          setClosedReason("Connection error. Session has ended.");
+          setIsClosed(true);
+          stopRecording();
+        };
       });
-      console.log("videoRef.current:", videoRef.current);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -220,7 +265,6 @@ const Interview: React.FC = () => {
         if (e.data.type === "blob") {
           const now = Date.now();
           if (now - lastSentRef.current > 1000) {
-            console.log(now, Date.now());
             lastSentRef.current = now;
             const blob = new Blob([e.data.buffer], { type: "image/jpeg" });
             const reader = new FileReader();
@@ -228,7 +272,7 @@ const Interview: React.FC = () => {
               if (typeof reader.result === "string") {
                 const base64data = reader.result.split(",")[1];
                 if (wsRef.current.video?.readyState === WebSocket.OPEN) {
-                  /**  wsRef.current.video.send(
+                  wsRef.current.video.send(
                     JSON.stringify({
                       realtime_input: {
                         media_chunks: [
@@ -236,8 +280,7 @@ const Interview: React.FC = () => {
                         ],
                       },
                     }),
-                  );*/
-                  console.log("web socket sent");
+                  );
                 }
               }
             };
@@ -268,7 +311,6 @@ const Interview: React.FC = () => {
         animFrameIdRef.current = requestAnimationFrame(sendFrame);
       };
 
-      // Start immediately if already loaded, otherwise wait
       if (videoRef.current && videoRef.current.readyState >= 2) {
         requestAnimationFrame(sendFrame);
       } else {
@@ -302,82 +344,71 @@ const Interview: React.FC = () => {
     };
   }, [videoReady, startVideoRequested]);
 
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([
-    {
-      who: "AI",
-      text: "Hello! I'll be conducting your structured interview today. Are you ready to begin?",
-    },
-    { who: "You", text: "Yes, absolutely ready." },
-    {
-      who: "AI",
-      text: "Great. Tell me about a challenging project you led and what the outcome was.",
-    },
-  ]);
-  const transcriptRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const t = setInterval(() => {
-      if (connected) {
-        setTimer((p) => p + 1);
-      }
+      if (connected) setTimer((p) => p + 1);
     }, 1000);
     return () => clearInterval(t);
   }, [connected]);
 
   useEffect(() => {
-    const getIterview = async () => {
-      const [interviewResponse, applicantResponse] = await Promise.all([
-        fetch(`http://localhost:8000/Interview/${interviewId}`),
-        fetch(`http://localhost:8000/Applicant/${applicantId}`),
-      ]);
-
-      const interviewData = await interviewResponse.json();
-      const applicantData = await applicantResponse.json();
-      setInterview(interviewData);
-      setApplicant(applicantData);
+    const getInterview = async () => {
+      try {
+        const [interviewResponse, applicantResponse] = await Promise.all([
+          api.get(`/Interview/full/${interviewId}`),
+          api.get(`/Applicant/${applicantId}`),
+        ]);
+        const interviewData = interviewResponse.data;
+        const applicantData = applicantResponse.data;
+        setInterview(interviewData);
+        setApplicant(applicantData);
+        if (interviewData.status === "closed") {
+          setClosedReason("This interview has been closed.");
+          setIsClosed(true);
+          return;
+        }
+        if (applicantData.started_session) {
+          setClosedReason("You have already completed this session.");
+          setIsClosed(true);
+          return;
+        }
+      } catch (err) {
+        console.error(err);
+      }
     };
-
-    getIterview();
+    getInterview();
   }, [interviewId, applicantId]);
+
   useEffect(() => {
     if (transcriptRef.current)
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
   }, [transcript]);
 
+  useEffect(() => {
+    if (isClosed) stopRecording();
+  }, [isClosed]);
+
   const fmt = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
-  const handleMic = () => {
-    if (!micActive) {
-      setMicActive(true);
-      setStatus("listening");
-    } else {
-      setMicActive(false);
-      setStatus("thinking");
-      setTimeout(() => {
-        setStatus("speaking");
-        setTranscript((p) => [
-          ...p,
-          {
-            who: "You",
-            text: "I led a complete redesign of our data pipeline that cut processing time by 60%, delivered two weeks early.",
-          },
-        ]);
-        setTimeout(() => {
-          setTranscript((p) => [
-            ...p,
-            {
-              who: "AI",
-              text: "Excellent result. What were the main technical challenges you encountered during that redesign?",
-            },
-          ]);
-          setQIdx((q) => Math.min(q + 1, totalQ));
-        }, 1600);
-      }, 1400);
-    }
+
+  const stopRecording = () => {
+    audioContextRef.current?.close();
+    audioContextRef.current = null;
+    gainNodeRef.current = null;
+    wsRef.current.audio?.close();
+    wsRef.current.video?.close();
+    workerRef.current?.terminate();
+    if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
+    processedStreamRef.current?.getTracks().forEach((t) => t.stop());
+    pcmBufferRef.current = [];
+    bufferedSamplesRef.current = 0;
+    setSessionStarted(false);
+    setConnected(false);
+    setSpeaking(false);
+    setIsClosed(true);
   };
 
   return (
@@ -430,10 +461,9 @@ const Interview: React.FC = () => {
             >
               {fmt(timer)}/{fmt((interview?.duration ?? 0) * 60)}
             </Typography>
-
             <Box
               component="button"
-              onClick={() => nav("/report")}
+              onClick={() => nav("/")}
               sx={{
                 background: "rgba(239,68,68,0.12)",
                 border: "1px solid rgba(239,68,68,0.25)",
@@ -452,10 +482,11 @@ const Interview: React.FC = () => {
             </Box>
           </Box>
         </Box>
+
         <Box
           sx={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 310px" }}
         >
-          {!sessionStarted && (
+          {!sessionStarted && !isClosed && (
             <Box
               sx={{
                 display: "flex",
@@ -474,9 +505,8 @@ const Interview: React.FC = () => {
                   textDecoration: "uppercase",
                 }}
               >
-                Hi, {applicant?.name}. Please start your interview{" "}
+                Hi, {applicant?.name}. Please start your interview
               </Typography>
-
               <Typography sx={{ color: "rgba(255,255,255,0.65)" }}>
                 Time limit: {interview?.duration} minutes
               </Typography>
@@ -496,15 +526,80 @@ const Interview: React.FC = () => {
                   fontFamily: "'DM Sans', sans-serif",
                   letterSpacing: "0.02em",
                   transition: "all 0.25s ease",
-                  "&:hover": {
-                    boxShadow: `0 0 32px rgba(91,93,246,0.7)`,
-                  },
+                  "&:hover": { boxShadow: `0 0 32px rgba(91,93,246,0.7)` },
                 }}
               >
                 Start Interview
               </Box>
             </Box>
           )}
+
+          {isClosed && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1rem",
+                p: "36px",
+                width: "100vw",
+              }}
+            >
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: "50%",
+                  background: "rgba(239,68,68,0.12)",
+                  border: "1px solid rgba(239,68,68,0.25)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 28,
+                  mb: "8px",
+                }}
+              >
+                <Icon name="lock" size={18} color={COLORS.textMuted} />
+              </Box>
+              <Typography
+                sx={{ fontSize: 22, fontWeight: 700, color: "white" }}
+              >
+                Session Unavailable
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 15,
+                  color: "rgba(255,255,255,0.5)",
+                  textAlign: "center",
+                  maxWidth: 400,
+                }}
+              >
+                {closedReason}
+              </Typography>
+              <Box
+                component="button"
+                onClick={() => nav("/dashboard")}
+                sx={{
+                  mt: "16px",
+                  background: `linear-gradient(135deg, ${COLORS.indigo}, ${COLORS.lavender})`,
+                  border: "none",
+                  borderRadius: "12px",
+                  px: "28px",
+                  py: "12px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "white",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  "&:hover": { boxShadow: `0 0 24px rgba(91,93,246,0.5)` },
+                }}
+              >
+                Go to Dashboard
+              </Box>
+            </Box>
+          )}
+
           <>
             <Box
               sx={{
@@ -521,7 +616,6 @@ const Interview: React.FC = () => {
                   width: "100%",
                   height: "80%",
                   display: "flex",
-
                   justifyContent: "center",
                   alignItems: "center",
                   gap: "3rem",
@@ -565,7 +659,6 @@ const Interview: React.FC = () => {
                     borderRadius: "2px",
                     boxShadow: "0 0 0 0.5px white",
                     position: "relative",
-
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
@@ -591,6 +684,7 @@ const Interview: React.FC = () => {
                   />
                 </Box>
               </Box>
+
               <Box
                 sx={{
                   mt: "60px",
@@ -611,25 +705,63 @@ const Interview: React.FC = () => {
                     "0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
                 }}
               >
-                <Box
-                  component="button"
-                  sx={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: "50%",
-                    border: "0.5px solid white",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "none",
-                  }}
-                >
-                  <VolumeUpIcon sx={{ fontSize: 22, color: "white" }} />
+                <Box sx={{ position: "relative" }}>
+                  <Box
+                    component="button"
+                    onClick={() => setShowVolumeSlider((p) => !p)}
+                    sx={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: "50%",
+                      border: "0.5px solid white",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: showVolumeSlider
+                        ? `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`
+                        : "none",
+                    }}
+                  >
+                    {volume === 0 ? (
+                      <VolumeOffIcon sx={{ fontSize: 22, color: "white" }} />
+                    ) : (
+                      <VolumeUpIcon sx={{ fontSize: 22, color: "white" }} />
+                    )}
+                  </Box>
+                  {showVolumeSlider && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: "62px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        background: "rgba(20,20,30,0.97)",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        borderRadius: "12px",
+                        p: "14px 10px",
+                        height: 130,
+                        display: "flex",
+                        alignItems: "center",
+                        zIndex: 10,
+                      }}
+                    >
+                      <Slider
+                        orientation="vertical"
+                        min={0}
+                        max={2}
+                        step={0.05}
+                        value={volume}
+                        onChange={handleVolumeChange}
+                        sx={{ color: COLORS.indigo, height: 100 }}
+                      />
+                    </Box>
+                  )}
                 </Box>
 
                 <Box
                   component="button"
+                  onClick={() => setShowTranscript((p) => !p)}
                   sx={{
                     width: 50,
                     height: 50,
@@ -639,7 +771,9 @@ const Interview: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    background: "none",
+                    background: showTranscript
+                      ? `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`
+                      : "none",
                   }}
                 >
                   <ChatIcon sx={{ fontSize: 22, color: "white" }} />
@@ -647,6 +781,7 @@ const Interview: React.FC = () => {
 
                 <Box
                   component="button"
+                  onClick={stopRecording}
                   sx={{
                     width: 50,
                     height: 50,
@@ -659,7 +794,6 @@ const Interview: React.FC = () => {
                     background: micActive
                       ? "linear-gradient(135deg,#EF4444,#F87171)"
                       : `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
-
                     transition: "all 0.25s ease",
                     "&:hover": {
                       boxShadow: micActive
@@ -678,6 +812,119 @@ const Interview: React.FC = () => {
                 </Box>
               </Box>
             </Box>
+
+            {showTranscript && (
+              <Box
+                sx={{
+                  position: "fixed",
+                  top: 0,
+                  right: 0,
+                  width: 320,
+                  height: "100vh",
+                  borderLeft: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(15,17,21,0.97)",
+                  backdropFilter: "blur(12px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  zIndex: 100,
+                }}
+              >
+                <Box
+                  sx={{
+                    px: "16px",
+                    py: "14px",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                    Transcript
+                  </Typography>
+                  <Box
+                    component="button"
+                    onClick={() => setShowTranscript(false)}
+                    sx={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <CloseIcon
+                      sx={{ fontSize: 18, color: "rgba(255,255,255,0.5)" }}
+                    />
+                  </Box>
+                </Box>
+                <Box
+                  ref={transcriptRef}
+                  sx={{
+                    flex: 1,
+                    overflowY: "auto",
+                    p: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                  }}
+                >
+                  {transcript.length === 0 && (
+                    <Typography
+                      sx={{
+                        color: "rgba(255,255,255,0.3)",
+                        fontSize: 13,
+                        textAlign: "center",
+                        mt: "2rem",
+                      }}
+                    >
+                      Transcript will appear here…
+                    </Typography>
+                  )}
+                  {transcript.map((entry, i) => (
+                    <Box
+                      key={i}
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                        alignItems:
+                          entry.who === "You" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          color: "rgba(255,255,255,0.4)",
+                          px: "4px",
+                        }}
+                      >
+                        {entry.who}
+                      </Typography>
+                      <Box
+                        sx={{
+                          maxWidth: "85%",
+                          px: "12px",
+                          py: "8px",
+                          borderRadius:
+                            entry.who === "You"
+                              ? "12px 12px 2px 12px"
+                              : "12px 12px 12px 2px",
+                          background:
+                            entry.who === "You"
+                              ? `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`
+                              : "rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 13, lineHeight: 1.5 }}>
+                          {entry.text}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
           </>
         </Box>
       </Box>

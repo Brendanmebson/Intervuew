@@ -13,10 +13,10 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Interview from "./pages/Interview";
 import ApplyPage from "./pages/interviewApplication";
+import PrepApplyPage from "./pages/PreppedInterviewApply";
 import Report from "./pages/Report";
 import Reports from "./pages/Reports";
 import History from "./pages/History";
-import Settings from "./pages/Settings";
 
 // Org app
 import OrgDash from "./pages/OrgDash";
@@ -25,14 +25,13 @@ import OrgRoleDetail from "./pages/OrgRoleDetail";
 import OrgCreateRole from "./pages/OrgCreateRole";
 import OrgCandidates from "./pages/OrgCandidates";
 import OrgCandidateDetail from "./pages/OrgCandidateDetail";
-import OrgInterviews from "./pages/OrgInterviews";
 import OrgAnalytics from "./pages/OrgAnalytics";
-import OrgSettings from "./pages/OrgSettings";
 
 // Marketing
 import Features from "./pages/Features";
 import Demo from "./pages/Demo";
 import NotFound from "./pages/NotFound";
+import { RoomOutlined } from "@mui/icons-material";
 
 // Hide Nav/Footer on all app shell pages
 const BARE_PREFIXES = [
@@ -79,22 +78,22 @@ const AppShell: React.FC = () => {
           path="/interview/application/:interviewId"
           element={<ApplyPage />}
         />
-        <Route path="/report/:id" element={<Report />} />
+        <Route path="/prep_interview/new" element={<PrepApplyPage />} />
+        <Route path="/report/:interviewId" element={<Report />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/history" element={<History />} />
-        <Route path="/settings" element={<Settings />} />
 
         {/* ── Org app ───────────────────────────────── */}
         <Route path="/org" element={<OrgDash />} />
         <Route path="/org/interview" element={<OrgJobRoles />} />
         <Route path="/org/interview/new" element={<OrgCreateRole />} />
-        <Route
-          path="/org/interview_detail/:interviewId"
-          element={<OrgRoleDetail />}
-        />
+        <Route path="/org/interview/:interviewId" element={<OrgRoleDetail />} />
         <Route path="/org/applicants" element={<OrgCandidates />} />
+        <Route
+          path="/org/applicants/:applicantId"
+          element={<OrgCandidateDetail />}
+        />
         <Route path="/org/analytics" element={<OrgAnalytics />} />
-        <Route path="/org/settings" element={<OrgSettings />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

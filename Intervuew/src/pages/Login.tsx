@@ -11,7 +11,13 @@ import {
   IconButton,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { Psychology, Business, Person, Visibility, VisibilityOff } from "@mui/icons-material";
+import {
+  Psychology,
+  Business,
+  Person,
+  Visibility,
+  VisibilityOff,
+} from "@mui/icons-material";
 import { GradientButton } from "../components/shared";
 import { UserRole } from "../types";
 import api from "../api/api";
@@ -57,10 +63,12 @@ const Login: React.FC = () => {
     const loginData = { email: data.email, password: data.password };
     try {
       if (type === "applicant") {
-        await api.post("/User/login/", loginData);
+        const res = await api.post("/User/login", loginData);
+        localStorage.setItem("user_id", res.data.id);
         nav("/dashboard");
       } else {
-        await api.post("/Organization/login/", loginData);
+        const res = await api.post("/Organization/login", loginData);
+        localStorage.setItem("org_id", res.data.id);
         nav("/org");
       }
     } catch (err: any) {
@@ -71,10 +79,12 @@ const Login: React.FC = () => {
   const createAccount = async (data: typeof formData, type: typeof role) => {
     try {
       if (type === "applicant") {
-        await api.post("/User/create", data);
+        const res = await api.post("/User/create", data);
+        localStorage.setItem("user_id", res.data.id);
         nav("/dashboard");
       } else {
-        await api.post("/Organization/create", data);
+        const res = await api.post("/Organization/create", data);
+        localStorage.setItem("org_id", res.data.id);
         nav("/org");
       }
     } catch (err: any) {
@@ -121,7 +131,13 @@ const Login: React.FC = () => {
       />
 
       <Box
-        sx={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 440, px: 3 }}
+        sx={{
+          position: "relative",
+          zIndex: 1,
+          width: "100%",
+          maxWidth: 440,
+          px: 3,
+        }}
       >
         {/* Glass card */}
         <Box
@@ -281,11 +297,7 @@ const Login: React.FC = () => {
               }}
             />
 
-            <GradientButton
-              fullWidth
-              size="md"
-              sx={{ mb: 2.5, py: "13px" }}
-            >
+            <GradientButton fullWidth size="md" sx={{ mb: 2.5, py: "13px" }}>
               {loading
                 ? "Please wait..."
                 : isSignup

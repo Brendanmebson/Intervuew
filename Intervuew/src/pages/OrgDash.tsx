@@ -1,39 +1,147 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
 import { SoftCard, GradientButton } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-import { CANDIDATES, JOB_ROLES, STATUS_COLORS } from "../data/orgData";
-import Cookies from "js-cookie";
+import api from "../api/api";
+
+interface Interview {
+  id: string;
+  role: string;
+  description: string;
+  status: string;
+  start_date: string;
+  duration: number;
+  job_requirements: string;
+  type: string;
+}
+
+interface Applicant {
+  id: string;
+  name: string;
+  interview_date: string | null;
+  started_session: boolean | null;
+  ended_session: boolean | null;
+}
+
+interface Report {
+  score: number | null;
+  cheating_detected: boolean | null;
+}
+
+interface JobEntry {
+  interview: Interview;
+  applicants: { applicant: Applicant; report: Report | null }[];
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  Recommended: COLORS.green,
+  Pending: COLORS.amber,
+  Declined: COLORS.red,
+};
+
+const getStatus = (applicant: Applicant, report: Report | null): string => {
+  if (!applicant.started_session) return "Pending";
+  if (report?.cheating_detected) return "Declined";
+  if (report?.score !== null && report?.score !== undefined)
+    return report.score >= 60 ? "Recommended" : "Declined";
+  return "Pending";
+};
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const OrgDash: React.FC = () => {
   const nav = useNavigate();
-  const orgId = Cookies.get("org_id");
+  const [orgName, setOrgName] = useState(" ");
+  const [jobs, setJobs] = useState<JobEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentCandidates = CANDIDATES.slice(0, 4);
-  const activeRoles = JOB_ROLES.filter((r) => r.status === "Active");
-  const totalCandidates = CANDIDATES.length;
-  const avgScore = Math.round(
-    CANDIDATES.reduce((a, c) => a + c.score, 0) / CANDIDATES.length,
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [meRes, nameRes] = await Promise.all([
+          api.get("/Organization/me"),
+          api.get("/Organization"),
+        ]);
+
+        const orgId = meRes.data.id;
+        setOrgName(nameRes.data.name);
+
+        const jobsRes = await api.get(
+          `/Organization/interview/candidate/report/${orgId}`,
+        );
+
+        const valid: JobEntry[] = (jobsRes.data as any[]).filter(
+          (entry) => entry?.interview,
+        );
+        setJobs(valid);
+      } catch (err: any) {
+        if (err?.response?.status === 401 || err?.response?.status === 403) {
+          nav("/login");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAll();
+  }, []);
+
+  // Derived stats
+  const activeRoles = jobs.filter((j) => j.interview.status === "active");
+
+  const allApplicants = jobs.flatMap((j) =>
+    j.applicants.map((a) => ({
+      ...a.applicant,
+      role: j.interview.role,
+      interviewId: j.interview.id,
+      report: a.report,
+      status: getStatus(a.applicant, a.report),
+    })),
   );
-  const thisWeek = CANDIDATES.filter(
-    (c) => c.date.includes("Mar") || c.date.includes("Feb 2"),
+
+  const totalCandidates = allApplicants.length;
+
+  const scoresOnly = allApplicants
+    .map((a) => a.report?.score)
+    .filter((s): s is number => s !== null && s !== undefined);
+  const avgScore =
+    scoresOnly.length > 0
+      ? Math.round(scoresOnly.reduce((a, b) => a + b, 0) / scoresOnly.length)
+      : 0;
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const thisWeek = allApplicants.filter(
+    (a) => a.interview_date && new Date(a.interview_date) >= oneWeekAgo,
   ).length;
+
+  const recentCandidates = [...allApplicants]
+    .filter((a) => a.interview_date)
+    .sort(
+      (a, b) =>
+        new Date(b.interview_date!).getTime() -
+        new Date(a.interview_date!).getTime(),
+    )
+    .slice(0, 4);
 
   return (
     <SidebarLayout
-      userLabel="Acme Corp"
-      userInitial="A"
+      userLabel={orgName}
+      userInitial={orgName?.[0] ?? "O"}
       navItems={[
         { icon: "home", label: "Overview", active: true, to: `/org` },
-        {
-          icon: "briefcase",
-          label: "Job Roles",
-          to: `/org/interview`,
-        },
+        { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
         { icon: "users", label: "Candidates", to: `/org/applicants` },
         { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}
@@ -56,10 +164,7 @@ const OrgDash: React.FC = () => {
             Manage interviews, candidates, and analytics.
           </Typography>
         </Box>
-        <GradientButton
-          size="md"
-          onClick={() => nav(`/org/interview/new/${orgId}`)}
-        >
+        <GradientButton size="md" onClick={() => nav(`/org/interview/new`)}>
           + Create Job Role
         </GradientButton>
       </Box>
@@ -79,23 +184,23 @@ const OrgDash: React.FC = () => {
             label: "Active Roles",
             val: activeRoles.length,
             color: COLORS.indigo,
-            to: "/org/roles",
+            to: "/org/interview",
           },
           {
             label: "Candidates",
             val: totalCandidates,
             color: COLORS.purple,
-            to: "/org/candidates",
+            to: "/org/applicants",
           },
           {
             label: "This Week",
             val: thisWeek,
             color: COLORS.green,
-            to: "/org/interviews",
+            to: "/org/applicants",
           },
           {
             label: "Avg. Score",
-            val: avgScore,
+            val: scoresOnly.length > 0 ? avgScore : "—",
             color: COLORS.amber,
             to: "/org/analytics",
           },
@@ -126,7 +231,7 @@ const OrgDash: React.FC = () => {
                 lineHeight: 1,
               }}
             >
-              {c.val}
+              {loading ? "—" : c.val}
             </Typography>
           </SoftCard>
         ))}
@@ -149,7 +254,7 @@ const OrgDash: React.FC = () => {
             Recent Candidates
           </Typography>
           <Typography
-            onClick={() => nav("/org/candidates")}
+            onClick={() => nav("/org/applicants")}
             sx={{
               fontSize: 13,
               color: COLORS.indigo,
@@ -182,85 +287,103 @@ const OrgDash: React.FC = () => {
           ))}
         </Box>
 
-        {recentCandidates.map((c, i) => (
-          <Box
-            key={c.id}
-            onClick={() => nav(`/org/candidates/${c.id}`)}
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1.3fr",
-              gap: "12px",
-              py: "13px",
-              borderBottom:
-                i < recentCandidates.length - 1
-                  ? "1px solid rgba(0,0,0,0.04)"
-                  : "none",
-              alignItems: "center",
-              cursor: "pointer",
-              borderRadius: "8px",
-              transition: "background 0.15s",
-              "&:hover": { background: alpha(COLORS.indigo, 0.03) },
-            }}
+        {loading ? (
+          <Typography
+            sx={{ color: COLORS.textMuted, fontSize: 14, pt: "20px" }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: "9px" }}>
-              <Box
+            Loading...
+          </Typography>
+        ) : recentCandidates.length === 0 ? (
+          <Typography
+            sx={{ color: COLORS.textMuted, fontSize: 14, pt: "20px" }}
+          >
+            No candidates yet.
+          </Typography>
+        ) : (
+          recentCandidates.map((c, i) => (
+            <Box
+              key={c.id}
+              onClick={() => nav(`/org/applicants/${c.id}`)}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1.3fr",
+                gap: "12px",
+                py: "13px",
+                borderBottom:
+                  i < recentCandidates.length - 1
+                    ? "1px solid rgba(0,0,0,0.04)"
+                    : "none",
+                alignItems: "center",
+                cursor: "pointer",
+                borderRadius: "8px",
+                transition: "background 0.15s",
+                "&:hover": { background: alpha(COLORS.indigo, 0.03) },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: "9px" }}>
+                <Box
+                  sx={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: `hsl(${i * 70 + 200},70%,92%)`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: `hsl(${i * 70 + 200},60%,40%)`,
+                    flexShrink: 0,
+                  }}
+                >
+                  {c.name[0]}
+                </Box>
+                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                  {c.name}
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+                {c.role}
+              </Typography>
+              <Typography
                 sx={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: `hsl(${i * 70 + 200},70%,92%)`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: `hsl(${i * 70 + 200},60%,40%)`,
-                  flexShrink: 0,
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  fontFamily: "'DM Mono',monospace",
                 }}
               >
-                {c.name[0]}
-              </Box>
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                {c.name}
+                {formatDate(c.interview_date)}
               </Typography>
+              <Typography
+                sx={{
+                  fontSize: 14,
+                  fontWeight: 700,
+                  fontFamily: "'DM Mono',monospace",
+                  color:
+                    c.report?.score !== null && c.report?.score !== undefined
+                      ? COLORS.text
+                      : COLORS.textLight,
+                }}
+              >
+                {c.report?.score ?? "—"}
+              </Typography>
+              <Box
+                sx={{
+                  background: alpha(STATUS_COLORS[c.status], 0.1),
+                  color: STATUS_COLORS[c.status],
+                  borderRadius: "20px",
+                  px: "12px",
+                  py: "3px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  display: "inline-block",
+                }}
+              >
+                {c.status}
+              </Box>
             </Box>
-            <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-              {c.role}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 13,
-                color: COLORS.textMuted,
-                fontFamily: "'DM Mono',monospace",
-              }}
-            >
-              {c.date}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 14,
-                fontWeight: 700,
-                fontFamily: "'DM Mono',monospace",
-              }}
-            >
-              {c.score}
-            </Typography>
-            <Box
-              sx={{
-                background: alpha(STATUS_COLORS[c.status], 0.1),
-                color: STATUS_COLORS[c.status],
-                borderRadius: "20px",
-                px: "12px",
-                py: "3px",
-                fontSize: 12,
-                fontWeight: 700,
-                display: "inline-block",
-              }}
-            >
-              {c.status}
-            </Box>
-          </Box>
-        ))}
+          ))
+        )}
       </SoftCard>
 
       {/* Active job roles */}
@@ -277,7 +400,7 @@ const OrgDash: React.FC = () => {
             Active Job Roles
           </Typography>
           <Typography
-            onClick={() => nav(`/org/interview/${orgId}`)}
+            onClick={() => nav(`/org/interview`)}
             sx={{
               fontSize: 13,
               color: COLORS.indigo,
@@ -289,92 +412,132 @@ const OrgDash: React.FC = () => {
             Manage →
           </Typography>
         </Box>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
-            gap: "13px",
-          }}
-        >
-          {activeRoles.slice(0, 3).map((r) => (
-            <SoftCard
-              key={r.id}
-              sx={{ p: "20px 22px", cursor: "pointer" }}
-              onClick={() => nav(`/org/interview/${orgId}`)}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  mb: "12px",
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "11px",
-                    background: alpha(COLORS.indigo, 0.08),
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+
+        {loading ? (
+          <Typography sx={{ color: COLORS.textMuted, fontSize: 14 }}>
+            Loading...
+          </Typography>
+        ) : activeRoles.length === 0 ? (
+          <SoftCard sx={{ p: "32px", textAlign: "center" }}>
+            <Typography sx={{ color: COLORS.textMuted }}>
+              No active roles. Create one to start screening candidates.
+            </Typography>
+          </SoftCard>
+        ) : (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3,1fr)",
+              gap: "13px",
+            }}
+          >
+            {activeRoles.slice(0, 3).map((j) => {
+              const recommended = j.applicants.filter(
+                (a) => getStatus(a.applicant, a.report) === "Recommended",
+              ).length;
+              const scoresArr = j.applicants
+                .map((a) => a.report?.score)
+                .filter((s): s is number => s !== null && s !== undefined);
+              const avg =
+                scoresArr.length > 0
+                  ? Math.round(
+                      scoresArr.reduce((a, b) => a + b, 0) / scoresArr.length,
+                    )
+                  : null;
+
+              return (
+                <SoftCard
+                  key={j.interview.id}
+                  sx={{ p: "20px 22px", cursor: "pointer" }}
+                  onClick={() => nav(`/org/interview/${j.interview.id}`)}
                 >
-                  <Icon name="briefcase" size={15} color={COLORS.indigo} />
-                </Box>
-                <Box>
-                  <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
-                    {r.title}
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
-                    {r.dept}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                <Box>
-                  <Typography
+                  <Box
                     sx={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: COLORS.textMuted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      mb: "2px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      mb: "12px",
                     }}
                   >
-                    Candidates
-                  </Typography>
-                  <Typography
-                    sx={{ fontSize: 20, fontWeight: 700, color: COLORS.indigo }}
+                    <Box
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "11px",
+                        background: alpha(COLORS.indigo, 0.08),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon name="briefcase" size={15} color={COLORS.indigo} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
+                        {j.interview.role}
+                      </Typography>
+                      <Typography
+                        sx={{ fontSize: 12, color: COLORS.textMuted }}
+                      >
+                        {j.interview.duration} min · {j.interview.type}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
                   >
-                    {r.candidates}
-                  </Typography>
-                </Box>
-                <Box sx={{ textAlign: "right" }}>
-                  <Typography
-                    sx={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: COLORS.textMuted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      mb: "2px",
-                    }}
-                  >
-                    Avg Score
-                  </Typography>
-                  <Typography
-                    sx={{ fontSize: 20, fontWeight: 700, color: COLORS.green }}
-                  >
-                    {r.avgScore}
-                  </Typography>
-                </Box>
-              </Box>
-            </SoftCard>
-          ))}
-        </Box>
+                    <Box>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: COLORS.textMuted,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          mb: "2px",
+                        }}
+                      >
+                        Candidates
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: COLORS.indigo,
+                        }}
+                      >
+                        {j.applicants.length}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: "right" }}>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: COLORS.textMuted,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          mb: "2px",
+                        }}
+                      >
+                        Avg Score
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 20,
+                          fontWeight: 700,
+                          color: COLORS.green,
+                        }}
+                      >
+                        {avg ?? "—"}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </SoftCard>
+              );
+            })}
+          </Box>
+        )}
       </Box>
     </SidebarLayout>
   );

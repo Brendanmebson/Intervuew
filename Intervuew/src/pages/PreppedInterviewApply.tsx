@@ -1,13 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
-import SidebarLayout from "../components/SidebarLayout";
+import { COLORS, RADIUS, SHADOWS } from "../theme/theme";
 import { SoftCard, GradientButton } from "../components/shared";
-import { COLORS } from "../theme/theme";
-import { InterviewRequest } from "@/types";
-import { CircularProgress } from "@mui/material";
+import { Icon } from "../components/Icons";
 import api from "../api/api";
+
+interface InterviewRequest {
+  role: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  duration: number;
+  organization_id: null;
+  user_id?: string;
+  job_requirements: {
+    role: string;
+    languages: Record<string, number>[];
+    domains: Record<string, number>[];
+    softskills: string[];
+  };
+}
 
 const Field: React.FC<{
   label: string;
@@ -17,7 +31,6 @@ const Field: React.FC<{
   multiline?: boolean;
   rows?: number;
   type?: string;
-  width?: string | number;
 }> = ({
   label,
   value,
@@ -26,9 +39,8 @@ const Field: React.FC<{
   multiline,
   rows = 4,
   type = "text",
-  width = "100%",
 }) => (
-  <Box sx={{ width }}>
+  <Box>
     <Typography
       sx={{ fontSize: 12, fontWeight: 600, color: COLORS.textMuted, mb: "6px" }}
     >
@@ -42,7 +54,7 @@ const Field: React.FC<{
         placeholder={placeholder}
         rows={rows}
         sx={{
-          width: "200%",
+          width: "100%",
           border: "1px solid rgba(0,0,0,0.1)",
           borderRadius: "12px",
           padding: "10px 14px",
@@ -52,6 +64,7 @@ const Field: React.FC<{
           color: COLORS.text,
           outline: "none",
           resize: "none",
+          boxSizing: "border-box",
           "&:focus": { borderColor: COLORS.indigo, background: COLORS.white },
         }}
       />
@@ -72,7 +85,7 @@ const Field: React.FC<{
           background: COLORS.bg,
           color: COLORS.text,
           outline: "none",
-          resize: "none",
+          boxSizing: "border-box",
           "&:focus": { borderColor: COLORS.indigo, background: COLORS.white },
         }}
       />
@@ -80,19 +93,26 @@ const Field: React.FC<{
   </Box>
 );
 
-const OrgCreateRole: React.FC = () => {
+const PrepApplyPage: React.FC = () => {
+  const nav = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState<
-    "loading" | "error" | "normal" | "success"
+    "normal" | "loading" | "success" | "error"
   >("normal");
-  const [orgName, setOrgName] = useState(" ");
+  const [langInput, setLangInput] = useState({ key: "", value: 0 });
+  const [domainInput, setDomainInput] = useState({ key: "", value: 0 });
+  const [softskillInput, setSoftskillInput] = useState("");
 
   const [interview, setInterview] = useState<InterviewRequest>({
     role: "",
     description: "",
-    organization_id: "",
     start_date: "",
     end_date: "",
     duration: 10,
+    organization_id: null,
     job_requirements: {
       role: "",
       languages: [],
@@ -101,62 +121,58 @@ const OrgCreateRole: React.FC = () => {
     },
   });
 
-  const nav = useNavigate();
-  const [langInput, setLangInput] = useState({ key: "", value: 0 });
-  const [domainInput, setDomainInput] = useState({ key: "", value: 0 });
-  const [softskillInput, setSoftskillInput] = useState("");
-
   useEffect(() => {
-    const fetchOrg = async () => {
+    const fetchMe = async () => {
       try {
-        const res = await api.get("/Organization");
-        setOrgName(res.data.name);
-      } catch {}
+        const res = await api.get("/User/me");
+        setUserId(res.data.id);
+        setName(res.data.name ?? "");
+      } catch {
+        nav("/login");
+      }
     };
-    fetchOrg();
+    fetchMe();
   }, []);
+
+  const handleFile = (f: File | null) => {
+    if (f && f.type === "application/pdf") setFile(f);
+  };
 
   const handleAddLanguage = () => {
     if (!langInput.key) return;
-    const languageExists = interview.job_requirements.languages.some(
-      (lang) => langInput.key in lang,
-    );
-    if (languageExists) {
-      alert("Language already added!");
+    if (interview.job_requirements.languages.some((l) => langInput.key in l)) {
+      alert("Already added!");
       return;
     }
-    setInterview({
-      ...interview,
+    setInterview((prev) => ({
+      ...prev,
       job_requirements: {
-        ...interview.job_requirements,
+        ...prev.job_requirements,
         languages: [
-          ...interview.job_requirements.languages,
+          ...prev.job_requirements.languages,
           { [langInput.key]: langInput.value },
         ],
       },
-    });
+    }));
     setLangInput({ key: "", value: 0 });
   };
 
   const handleAddDomain = () => {
     if (!domainInput.key) return;
-    const domainExists = interview.job_requirements.domains.some(
-      (domain) => domainInput.key in domain,
-    );
-    if (domainExists) {
-      alert("Domain already added!");
+    if (interview.job_requirements.domains.some((d) => domainInput.key in d)) {
+      alert("Already added!");
       return;
     }
-    setInterview({
-      ...interview,
+    setInterview((prev) => ({
+      ...prev,
       job_requirements: {
-        ...interview.job_requirements,
+        ...prev.job_requirements,
         domains: [
-          ...interview.job_requirements.domains,
+          ...prev.job_requirements.domains,
           { [domainInput.key]: domainInput.value },
         ],
       },
-    });
+    }));
     setDomainInput({ key: "", value: 0 });
   };
 
@@ -164,118 +180,85 @@ const OrgCreateRole: React.FC = () => {
     const skill = softskillInput.trim();
     if (!skill) return;
     if (interview.job_requirements.softskills.includes(skill)) {
-      alert("Softskill already added!");
+      alert("Already added!");
       return;
     }
-    setInterview({
-      ...interview,
+    setInterview((prev) => ({
+      ...prev,
       job_requirements: {
-        ...interview.job_requirements,
-        softskills: [...interview.job_requirements.softskills, skill],
+        ...prev.job_requirements,
+        softskills: [...prev.job_requirements.softskills, skill],
       },
-    });
+    }));
     setSoftskillInput("");
   };
 
-  const handleRemoveLanguage = (key: string) => {
-    setInterview({
-      ...interview,
-      job_requirements: {
-        ...interview.job_requirements,
-        languages: interview.job_requirements.languages.filter(
-          (lang) => !(key in lang),
-        ),
-      },
-    });
-  };
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
+    if (!file) {
+      alert("Please upload your resume (PDF)");
+      return;
+    }
+    if (!interview.role || !interview.start_date || !interview.end_date) {
+      alert("Please fill in all required fields");
+      return;
+    }
+    if (!userId) {
+      alert("Not authenticated");
+      return;
+    }
 
-  const handleRemoveDomain = (key: string) => {
-    setInterview({
-      ...interview,
-      job_requirements: {
-        ...interview.job_requirements,
-        domains: interview.job_requirements.domains.filter(
-          (domain) => !(key in domain),
-        ),
-      },
-    });
-  };
+    setStatus("loading");
 
-  const handleRemoveSoftskill = (skill: string) => {
-    setInterview({
-      ...interview,
-      job_requirements: {
-        ...interview.job_requirements,
-        softskills: interview.job_requirements.softskills.filter(
-          (s) => s !== skill,
-        ),
-      },
-    });
-  };
-
-  const createInterview = async () => {
     try {
-      if (!interview.role || !interview.start_date || !interview.end_date) {
-        alert("Please fill in all required fields");
-        return;
-      }
-      if (
-        !interview.duration ||
-        interview.duration < 10 ||
-        interview.duration > 40
-      ) {
-        alert("Duration must be between 10 and 40 minutes");
-        return;
-      }
+      const formData = new FormData();
+      formData.append("name", name.trim());
+      formData.append(
+        "request",
+        JSON.stringify({
+          ...interview,
+          job_requirements: {
+            ...interview.job_requirements,
+            role: interview.role,
+          },
+        }),
+      );
+      formData.append("file", file);
 
-      setStatus("loading");
-
-      const meRes = await api.get("/Organization/me");
-      const orgId = meRes.data.id;
-
-      const request = {
-        ...interview,
-        organization_id: orgId,
-      };
-
-      console.log("Sending request:", JSON.stringify(request, null, 2));
-
-      const response = await api.post("/Interview/create", request);
-      console.log("Interview created successfully:", response.data);
+      const res = await api.post(`/Prepper/create/new/${userId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       setStatus("success");
-      alert("Role created successfully!");
-      setTimeout(() => setStatus("normal"), 3000);
-    } catch (error) {
-      console.error("Error creating interview:", error);
+      const { interview_id, applicant_id } = res.data;
+
+      setTimeout(() => {
+        nav(`/interview/${applicant_id}/${interview_id}`);
+      }, 3000);
+    } catch (err: any) {
+      console.error(err);
       setStatus("error");
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to create interview";
-      alert(errorMessage);
+      alert(err?.response?.data?.detail || "Something went wrong");
       setTimeout(() => setStatus("normal"), 3000);
     }
   };
 
   return (
-    <SidebarLayout
-      userLabel={orgName}
-      userInitial={orgName?.[0] ?? "O"}
-      navItems={[
-        { icon: "home", label: "Overview", to: `/org` },
-        {
-          icon: "briefcase",
-          label: "Job Roles",
-          active: true,
-          to: `/org/interview`,
-        },
-        { icon: "users", label: "Candidates", to: `/org/applicants` },
-        { icon: "chart", label: "Analytics", to: `/org/analytics` },
-      ]}
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: COLORS.bg,
+        p: { xs: 2, md: 4 },
+      }}
     >
-      <Box className="fade-up" sx={{ mb: "28px" }}>
+      {/* Header */}
+      <Box sx={{ maxWidth: 1000, mx: "auto", mb: "28px" }}>
         <Box
           component="button"
-          onClick={() => nav("/org/interview")}
+          onClick={() => nav("/")}
           sx={{
             background: "none",
             border: "none",
@@ -291,45 +274,174 @@ const OrgCreateRole: React.FC = () => {
             "&:hover": { color: COLORS.text },
           }}
         >
-          ← Back to Roles
+          ← Back to Dashboard
         </Box>
         <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
-          Create An Interview
+          New Prep Session
         </Typography>
         <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
-          Set up the role and AI will generate tailored interview questions.
+          Set up your role, upload your resume, and start practicing with AI.
         </Typography>
       </Box>
 
       <Box
         sx={{
+          maxWidth: 1000,
+          mx: "auto",
           display: "grid",
-          gridTemplateColumns: "1.4fr 1fr",
+          gridTemplateColumns: { xs: "1fr", md: "1.4fr 1fr" },
           gap: "20px",
           alignItems: "start",
         }}
       >
         {/* Left col */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-          <SoftCard className="fade-up-1" sx={{ p: "26px 28px" }}>
+          {/* Personal Info */}
+          <SoftCard sx={{ p: "26px 28px" }}>
+            <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
+              Your Info
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <Field
+                label="Full Name"
+                value={name}
+                onChange={setName}
+                placeholder="John Doe"
+              />
+
+              {/* Resume upload */}
+              <Box>
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: COLORS.textMuted,
+                    mb: "6px",
+                  }}
+                >
+                  Resume (PDF)
+                </Typography>
+                <Box
+                  onClick={() =>
+                    document.getElementById("resume-prep")?.click()
+                  }
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    handleFile(e.dataTransfer.files[0]);
+                  }}
+                  sx={{
+                    border: `1.5px dashed ${dragOver ? COLORS.indigo : "rgba(0,0,0,0.12)"}`,
+                    borderRadius: "12px",
+                    p: "20px",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    bgcolor: dragOver ? alpha(COLORS.indigo, 0.04) : COLORS.bg,
+                    "&:hover": {
+                      borderColor: COLORS.indigo,
+                      bgcolor: alpha(COLORS.indigo, 0.04),
+                    },
+                  }}
+                >
+                  <input
+                    id="resume-prep"
+                    type="file"
+                    accept=".pdf"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                  />
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "10px",
+                      bgcolor: alpha(COLORS.indigo, 0.08),
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      mx: "auto",
+                      mb: "8px",
+                    }}
+                  >
+                    <Icon name="upload" size={15} color={COLORS.indigo} />
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    <span style={{ color: COLORS.indigo, fontWeight: 600 }}>
+                      Click to upload
+                    </span>{" "}
+                    or drag and drop
+                  </Typography>
+                  <Typography variant="caption">PDF only</Typography>
+                </Box>
+                {file && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      mt: "8px",
+                      p: "8px 12px",
+                      bgcolor: alpha(COLORS.green, 0.06),
+                      borderRadius: "10px",
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: COLORS.green,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: COLORS.green,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {file.name}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
+          </SoftCard>
+
+          {/* Role Details */}
+          <SoftCard sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
               Role Details
             </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <Field
                 label="Job Title"
                 value={interview.role}
-                onChange={(v: string) => {
+                onChange={(v) =>
                   setInterview((prev) => ({
                     ...prev,
                     role: v,
-                    job_requirements: {
-                      ...prev.job_requirements,
-                      role: v,
-                    },
-                  }));
-                }}
-                placeholder="e.g. Senior Product Manager"
+                    job_requirements: { ...prev.job_requirements, role: v },
+                  }))
+                }
+                placeholder="e.g. Senior Frontend Engineer"
+              />
+              <Field
+                label="Description"
+                value={interview.description}
+                onChange={(v) =>
+                  setInterview((prev) => ({ ...prev, description: v }))
+                }
+                placeholder="What does this role involve?"
+                multiline
+                rows={3}
               />
               <Box
                 sx={{
@@ -341,37 +453,27 @@ const OrgCreateRole: React.FC = () => {
                 <Field
                   label="Start Date"
                   value={interview.start_date}
-                  onChange={(v: string) =>
-                    setInterview({ ...interview, start_date: v })
+                  onChange={(v) =>
+                    setInterview((prev) => ({ ...prev, start_date: v }))
                   }
                   type="datetime-local"
                 />
                 <Field
                   label="End Date"
                   value={interview.end_date}
-                  onChange={(v: string) =>
-                    setInterview({ ...interview, end_date: v })
+                  onChange={(v) =>
+                    setInterview((prev) => ({ ...prev, end_date: v }))
                   }
                   type="datetime-local"
-                />
-                <Field
-                  label="Description"
-                  value={interview.description}
-                  onChange={(v: string) =>
-                    setInterview({ ...interview, description: v })
-                  }
-                  placeholder="Enter Job description"
-                  multiline
-                  rows={4}
                 />
               </Box>
             </Box>
           </SoftCard>
 
           {/* Languages */}
-          <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
+          <SoftCard sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
-              Languages and Frameworks (with Experience)
+              Languages & Frameworks
             </Typography>
             <Box sx={{ display: "flex", gap: "8px", mb: "12px" }}>
               <Box
@@ -401,9 +503,9 @@ const OrgCreateRole: React.FC = () => {
                 onChange={(e: any) =>
                   setLangInput({ ...langInput, value: Number(e.target.value) })
                 }
-                placeholder="Years"
+                placeholder="Yrs"
                 sx={{
-                  width: "100px",
+                  width: "80px",
                   border: "1px solid rgba(0,0,0,0.1)",
                   borderRadius: "12px",
                   padding: "10px 14px",
@@ -419,7 +521,7 @@ const OrgCreateRole: React.FC = () => {
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+            <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {interview.job_requirements.languages.map((lang) => {
                 const [key, value] = Object.entries(lang)[0];
                 return (
@@ -434,19 +536,28 @@ const OrgCreateRole: React.FC = () => {
                       borderRadius: "20px",
                       px: "12px",
                       py: "5px",
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: 600,
                     }}
                   >
-                    {key} | {value} yrs
+                    {key} · {value}y
                     <Box
-                      onClick={() => handleRemoveLanguage(key)}
+                      onClick={() =>
+                        setInterview((prev) => ({
+                          ...prev,
+                          job_requirements: {
+                            ...prev.job_requirements,
+                            languages: prev.job_requirements.languages.filter(
+                              (l) => !(key in l),
+                            ),
+                          },
+                        }))
+                      }
                       sx={{
                         cursor: "pointer",
                         opacity: 0.6,
                         "&:hover": { opacity: 1 },
                         fontSize: 16,
-                        lineHeight: 1,
                       }}
                     >
                       ×
@@ -455,17 +566,17 @@ const OrgCreateRole: React.FC = () => {
                 );
               })}
               {interview.job_requirements.languages.length === 0 && (
-                <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No languages added yet.
+                <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                  None added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
 
           {/* Domains */}
-          <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
+          <SoftCard sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
-              Domains (with Experience)
+              Domains
             </Typography>
             <Box sx={{ display: "flex", gap: "8px", mb: "12px" }}>
               <Box
@@ -498,9 +609,9 @@ const OrgCreateRole: React.FC = () => {
                     value: Number(e.target.value),
                   })
                 }
-                placeholder="Years"
+                placeholder="Yrs"
                 sx={{
-                  width: "100px",
+                  width: "80px",
                   border: "1px solid rgba(0,0,0,0.1)",
                   borderRadius: "12px",
                   padding: "10px 14px",
@@ -516,7 +627,7 @@ const OrgCreateRole: React.FC = () => {
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+            <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {interview.job_requirements.domains.map((domain) => {
                 const [key, value] = Object.entries(domain)[0];
                 return (
@@ -531,19 +642,28 @@ const OrgCreateRole: React.FC = () => {
                       borderRadius: "20px",
                       px: "12px",
                       py: "5px",
-                      fontSize: 13,
+                      fontSize: 12,
                       fontWeight: 600,
                     }}
                   >
-                    {key} | {value} yrs
+                    {key} · {value}y
                     <Box
-                      onClick={() => handleRemoveDomain(key)}
+                      onClick={() =>
+                        setInterview((prev) => ({
+                          ...prev,
+                          job_requirements: {
+                            ...prev.job_requirements,
+                            domains: prev.job_requirements.domains.filter(
+                              (d) => !(key in d),
+                            ),
+                          },
+                        }))
+                      }
                       sx={{
                         cursor: "pointer",
                         opacity: 0.6,
                         "&:hover": { opacity: 1 },
                         fontSize: 16,
-                        lineHeight: 1,
                       }}
                     >
                       ×
@@ -552,15 +672,15 @@ const OrgCreateRole: React.FC = () => {
                 );
               })}
               {interview.job_requirements.domains.length === 0 && (
-                <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No domains added yet.
+                <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                  None added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
 
           {/* Softskills */}
-          <SoftCard className="fade-up-2" sx={{ p: "26px 28px" }}>
+          <SoftCard sx={{ p: "26px 28px" }}>
             <Typography variant="h6" sx={{ fontSize: 14, mb: "18px" }}>
               Softskills
             </Typography>
@@ -590,7 +710,7 @@ const OrgCreateRole: React.FC = () => {
                 Add
               </GradientButton>
             </Box>
-            <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap", mt: 2 }}>
+            <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {interview.job_requirements.softskills.map((skill) => (
                 <Box
                   key={skill}
@@ -603,19 +723,28 @@ const OrgCreateRole: React.FC = () => {
                     borderRadius: "20px",
                     px: "12px",
                     py: "5px",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 600,
                   }}
                 >
                   {skill}
                   <Box
-                    onClick={() => handleRemoveSoftskill(skill)}
+                    onClick={() =>
+                      setInterview((prev) => ({
+                        ...prev,
+                        job_requirements: {
+                          ...prev.job_requirements,
+                          softskills: prev.job_requirements.softskills.filter(
+                            (s) => s !== skill,
+                          ),
+                        },
+                      }))
+                    }
                     sx={{
                       cursor: "pointer",
                       opacity: 0.6,
                       "&:hover": { opacity: 1 },
                       fontSize: 16,
-                      lineHeight: 1,
                     }}
                   >
                     ×
@@ -623,15 +752,15 @@ const OrgCreateRole: React.FC = () => {
                 </Box>
               ))}
               {interview.job_requirements.softskills.length === 0 && (
-                <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
-                  No softskills added yet.
+                <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                  None added yet.
                 </Typography>
               )}
             </Box>
           </SoftCard>
         </Box>
 
-        {/* Right col - Preview */}
+        {/* Right col — Preview + Submit */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: "18px" }}>
           <SoftCard
             sx={{
@@ -653,9 +782,17 @@ const OrgCreateRole: React.FC = () => {
               Preview
             </Typography>
 
-            <Typography sx={{ fontSize: 18, fontWeight: 700, mb: "8px" }}>
+            <Typography sx={{ fontSize: 18, fontWeight: 700, mb: "6px" }}>
               {interview.role || "Role title"}
             </Typography>
+
+            {name && (
+              <Typography
+                sx={{ fontSize: 13, color: COLORS.textMuted, mb: "8px" }}
+              >
+                {name}
+              </Typography>
+            )}
 
             {interview.description && (
               <Typography
@@ -736,7 +873,7 @@ const OrgCreateRole: React.FC = () => {
             )}
 
             {interview.job_requirements.languages.length > 0 && (
-              <Box sx={{ mb: "12px" }}>
+              <Box sx={{ mb: "10px" }}>
                 <Typography
                   sx={{
                     fontSize: 11,
@@ -745,11 +882,11 @@ const OrgCreateRole: React.FC = () => {
                     mb: "6px",
                   }}
                 >
-                  Languages & Frameworks
+                  Languages
                 </Typography>
                 <Box sx={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                   {interview.job_requirements.languages
-                    .slice(0, 3)
+                    .slice(0, 4)
                     .map((lang) => {
                       const [key, value] = Object.entries(lang)[0];
                       return (
@@ -774,7 +911,7 @@ const OrgCreateRole: React.FC = () => {
             )}
 
             {interview.job_requirements.domains.length > 0 && (
-              <Box sx={{ mb: "12px" }}>
+              <Box sx={{ mb: "10px" }}>
                 <Typography
                   sx={{
                     fontSize: 11,
@@ -845,34 +982,63 @@ const OrgCreateRole: React.FC = () => {
                 </Box>
               </Box>
             )}
+
+            {file && (
+              <Box
+                sx={{
+                  mt: "12px",
+                  pt: "12px",
+                  borderTop: "1px solid rgba(0,0,0,0.05)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: COLORS.green,
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography
+                  sx={{ fontSize: 12, color: COLORS.green, fontWeight: 600 }}
+                >
+                  {file.name}
+                </Typography>
+              </Box>
+            )}
           </SoftCard>
 
-          <GradientButton fullWidth size="lg" onClick={createInterview}>
+          <GradientButton fullWidth size="lg" onClick={handleSubmit}>
             <Box
               sx={{
                 display: "flex",
-                justifyContent: "center",
                 alignItems: "center",
-                gap: "0.5rem",
+                justifyContent: "center",
+                gap: "8px",
               }}
             >
               {status === "loading" && (
                 <CircularProgress size={15} sx={{ color: COLORS.white }} />
-              )}{" "}
-              {status === "success" ? "Role Created!" : "Create Role"}
+              )}
+              {status === "success"
+                ? "Starting session..."
+                : status === "loading"
+                  ? "Creating..."
+                  : "Start Prep Session"}
             </Box>
           </GradientButton>
-          <GradientButton
-            fullWidth
-            variant="ghost"
-            onClick={() => nav("/org/interview")}
-          >
+
+          <GradientButton fullWidth variant="ghost" onClick={() => nav("/")}>
             Cancel
           </GradientButton>
         </Box>
       </Box>
-    </SidebarLayout>
+    </Box>
   );
 };
 
-export default OrgCreateRole;
+export default PrepApplyPage;
