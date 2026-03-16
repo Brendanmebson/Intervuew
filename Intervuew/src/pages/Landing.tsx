@@ -1,35 +1,16 @@
 import React, { useState } from "react";
+import { Box, Typography, Button, alpha } from "@mui/material";
 import {
-  Box,
-  Typography,
-  Button,
-  AppBar,
-  Toolbar,
-  alpha,
-  Chip,
-  IconButton,
-} from "@mui/material";
-import {
-  AutoAwesome,
   Psychology,
   RecordVoiceOver,
-  Assessment,
-  CheckCircleOutline,
   PlayArrow,
   ArrowForward,
-  TrendingUp,
-  Groups,
-  WorkspacePremium,
-  Speed,
-  ContentCopy,
-  OpenInNew,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "../components/Icons";
 import { SoftCard, GradientButton } from "../components/shared";
 import { COLORS } from "../theme/theme";
 
-/* ─── Hero Mockup (kept from original) ─────────────────────────── */
 const HeroMockup = () => (
   <Box sx={{ position: "relative", width: "100%", maxWidth: 480, mx: "auto" }}>
     <SoftCard sx={{ p: 3 }}>
@@ -77,7 +58,6 @@ const HeroMockup = () => (
           </Typography>
         </Box>
       </Box>
-      {/* Waveform */}
       <Box
         sx={{
           display: "flex",
@@ -108,25 +88,8 @@ const HeroMockup = () => (
         "Tell me about a time you led a cross-functional team through a
         challenging project..."
       </Typography>
-      <Box sx={{ display: "flex", gap: 1 }}>
-        {["Communication", "Technical", "Clarity"].map((tag) => (
-          <Chip
-            key={tag}
-            label={tag}
-            size="small"
-            sx={{
-              bgcolor: alpha(COLORS.indigo, 0.08),
-              color: COLORS.indigo,
-              fontSize: "0.65rem",
-              fontWeight: 600,
-              height: 20,
-            }}
-          />
-        ))}
-      </Box>
     </SoftCard>
 
-    {/* Floating score card */}
     <Box
       sx={{
         position: "absolute",
@@ -188,7 +151,6 @@ const HeroMockup = () => (
       </Box>
     </Box>
 
-    {/* Floating transcript chip */}
     <Box
       sx={{
         position: "absolute",
@@ -215,30 +177,29 @@ const HeroMockup = () => (
   </Box>
 );
 
-/* ─── Data (from new) ───────────────────────────────────────────── */
 const problems = [
   {
-    icon: "shield",
-    label: "Interviewer Bias",
-    desc: "Interviewers unconsciously favor candidates similar to themselves.",
+    icon: "clock",
+    label: "Manual Screening Takes Too Long",
+    desc: "Recruiters spend days scheduling and conducting first-round calls that AI can handle in minutes.",
     color: COLORS.red,
   },
   {
-    icon: "chart",
-    label: "Inconsistent Scoring",
-    desc: "No two interviews are evaluated the same way.",
+    icon: "shield",
+    label: "No Way to Detect Cheating",
+    desc: "Remote interviews have no proctoring — candidates can cheat with no accountability.",
     color: COLORS.amber,
   },
   {
-    icon: "zap",
-    label: "Fragmented Tools",
-    desc: "Teams juggle Zoom, spreadsheets, and email — data gets lost.",
+    icon: "chart",
+    label: "Inconsistent Candidate Evaluation",
+    desc: "Different interviewers ask different questions, making it impossible to compare candidates fairly.",
     color: COLORS.purple,
   },
   {
-    icon: "clock",
-    label: "High Screening Cost",
-    desc: "Senior engineers spend hours on calls AI could handle instantly.",
+    icon: "users",
+    label: "Resume-Only Decisions",
+    desc: "Most screening stops at the CV. There's no structured way to assess real skills before the final round.",
     color: COLORS.blue,
   },
 ];
@@ -247,37 +208,36 @@ const features = [
   {
     icon: "mic",
     title: "Real-Time Voice AI",
-    desc: "Sub-2s AI responses with natural conversational flow.",
+    desc: "Sub-2s AI responses with natural conversational flow. The AI speaks, listens, and adapts to every candidate in real time.",
     color: COLORS.indigo,
     wide: true,
   },
   {
+    icon: "shield",
+    title: "Proctoring & Cheating Detection",
+    desc: "Live video monitoring with automatic flagging of suspicious behaviour during the session.",
+    color: COLORS.red,
+  },
+  {
     icon: "chart",
-    title: "Deep Analytics",
-    desc: "Per-question scoring, clarity, and benchmarks.",
+    title: "Candidate Reports",
+    desc: "Scores, cheating detection results, and session status for every applicant — all in one place.",
     color: COLORS.purple,
   },
   {
-    icon: "shield",
-    title: "Bias-Free Evaluation",
-    desc: "Standardized rubrics applied identically, every time.",
-    color: COLORS.pink,
-  },
-  {
-    icon: "zap",
-    title: "Instant Transcription",
-    desc: "Accurate speech-to-text with real-time processing.",
-    color: COLORS.amber,
-  },
-  {
     icon: "users",
-    title: "Team Collaboration",
-    desc: "Share reports and make hiring decisions together.",
+    title: "Organization Dashboard",
+    desc: "Create roles, share application links, and manage all candidates from a single org workspace.",
     color: COLORS.green,
+  },
+  {
+    icon: "brain",
+    title: "AI-Generated Questions",
+    desc: "Role-specific questions generated from your job requirements — no manual question writing needed.",
+    color: COLORS.amber,
   },
 ];
 
-/* ─── Page ──────────────────────────────────────────────────────── */
 const Landing: React.FC = () => {
   const navigate = useNavigate();
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null);
@@ -302,7 +262,6 @@ const Landing: React.FC = () => {
             flexWrap: "wrap",
           }}
         >
-          {/* Left */}
           <Box sx={{ flex: "1 1 460px", maxWidth: 560 }}>
             <Typography
               variant="h1"
@@ -329,13 +288,12 @@ const Landing: React.FC = () => {
                 maxWidth: 440,
               }}
             >
-              Real-time multimodal AI conducting structured interviews fully
-              inside your platform — no bias, no guesswork.
+              Real-time voice AI conducts structured interviews, monitors
+              candidates live, and delivers instant reports for tech interviews;
             </Typography>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <GradientButton size="lg" to="/login">
-                Start Free Interview{" "}
-                <ArrowForward sx={{ ml: 1, fontSize: 20 }} />
+                Get Started <ArrowForward sx={{ ml: 1, fontSize: 20 }} />
               </GradientButton>
               <Button
                 variant="outlined"
@@ -362,7 +320,6 @@ const Landing: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Right */}
           <Box
             sx={{
               flex: "1 1 380px",
@@ -417,21 +374,20 @@ const Landing: React.FC = () => {
                 variant="h2"
                 sx={{ mb: 2.5, fontSize: { xs: "2rem", md: "2.5rem" } }}
               >
-                Hiring is broken.{" "}
+                Screening is slow,{" "}
                 <Box
                   component="span"
                   sx={{ color: COLORS.textLight, fontWeight: 400 }}
                 >
-                  We're fixing it.
+                  inconsistent, and easy to game.
                 </Box>
               </Typography>
               <Typography
                 sx={{ color: "#5A5E72", lineHeight: 1.8, fontSize: "1rem" }}
               >
-                Traditional interviews fail both sides — riddled with bias,
-                inconsistency, and wasted time. The average company spends 42
-                days and $4,700 per hire — most of it on inefficient manual
-                processes that could be automated.
+                First-round interviews are broken — they're expensive to run,
+                impossible to standardize, and wide open to cheating. Teams end
+                up making hiring decisions on gut feeling instead of data.
               </Typography>
             </Box>
             <Box
@@ -502,7 +458,6 @@ const Landing: React.FC = () => {
             </Typography>
           </Box>
           <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-            {/* Step 01 */}
             <Box
               sx={{
                 flex: "1 1 300px",
@@ -532,7 +487,7 @@ const Landing: React.FC = () => {
                   STEP 01
                 </Typography>
                 <Typography variant="h4" sx={{ color: "#fff", mb: 1.5 }}>
-                  Set Up Your Interview
+                  Create a Role & Share the Link
                 </Typography>
                 <Typography
                   sx={{
@@ -541,87 +496,13 @@ const Landing: React.FC = () => {
                     mb: 3,
                   }}
                 >
-                  Choose your role, define required skills, and let AI generate
-                  a structured question set. Ready in 2 minutes.
+                  Set up your job role with required skills and languages. A
+                  unique application link is generated instantly — share it with
+                  candidates.
                 </Typography>
-                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3 }}>
-                  {[
-                    "Custom Questions",
-                    "Auto-Generated",
-                    "Skill-Based",
-                    "Manual Mode",
-                  ].map((t) => (
-                    <Box
-                      key={t}
-                      sx={{
-                        background: "rgba(91,93,246,0.22)",
-                        border: "1px solid rgba(91,93,246,0.32)",
-                        borderRadius: "20px",
-                        px: "12px",
-                        py: "4px",
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: COLORS.lavender,
-                      }}
-                    >
-                      {t}
-                    </Box>
-                  ))}
-                </Box>
-                <Typography
-                  sx={{
-                    color: "rgba(255,255,255,0.45)",
-                    fontSize: "0.7rem",
-                    mb: 1,
-                  }}
-                >
-                  Share with applicants:
-                </Typography>
-                <Box
-                  sx={{
-                    px: 1.5,
-                    py: 1,
-                    borderRadius: 1.5,
-                    bgcolor: alpha(COLORS.indigo, 0.15),
-                    border: `1px solid ${alpha(COLORS.indigo, 0.3)}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 1,
-                  }}
-                >
-                  <Typography
-                    sx={{
-                      color: "white",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      fontFamily: "monospace",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    intervuew.ai/apply/stripe-sr-eng-001
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
-                    <IconButton
-                      size="small"
-                      sx={{ color: COLORS.lavender, p: 0.5 }}
-                    >
-                      <ContentCopy sx={{ fontSize: 14 }} />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      sx={{ color: COLORS.lavender, p: 0.5 }}
-                    >
-                      <OpenInNew sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Box>
-                </Box>
               </SoftCard>
             </Box>
 
-            {/* Steps 02 & 03 */}
             <Box
               sx={{
                 flex: "1 1 240px",
@@ -634,14 +515,14 @@ const Landing: React.FC = () => {
                 {
                   step: "02",
                   title: "AI Conducts the Interview",
-                  desc: "The AI speaks, listens, and evaluates in real-time — structured, consistent, every candidate.",
+                  desc: "Candidates apply, upload their resume, and the AI conducts a live voice interview — proctored and scored automatically.",
                   icon: "brain",
                   color: COLORS.indigo,
                 },
                 {
                   step: "03",
-                  title: "Get Structured Reports",
-                  desc: "Receive per-question scores, strengths, weaknesses, and side-by-side candidate analytics.",
+                  title: "Review the Report & Decide",
+                  desc: "See each candidate's score, session status, proctoring alerts, and cheating detection — all in one report.",
                   icon: "chart",
                   color: COLORS.green,
                 },
@@ -832,8 +713,8 @@ const Landing: React.FC = () => {
               mx: "auto",
             }}
           >
-            Join 500+ companies using Intervuew to find better talent, faster
-            and more consistently.
+            Set up your first AI-powered interview in under 2 minutes. No credit
+            card required.
           </Typography>
           <Box
             sx={{
@@ -843,12 +724,13 @@ const Landing: React.FC = () => {
               flexWrap: "wrap",
             }}
           >
-            <GradientButton size="lg" to="/login">
-              Start free — no card needed
+            <GradientButton size="lg" to="/register">
+              Create an Account
             </GradientButton>
             <Button
               variant="outlined"
               size="large"
+              onClick={() => navigate("/demo")}
               startIcon={<PlayArrow />}
               sx={{
                 borderColor: "rgba(255,255,255,0.4)",

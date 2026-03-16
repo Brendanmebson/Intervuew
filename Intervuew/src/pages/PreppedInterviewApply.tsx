@@ -237,7 +237,7 @@ const PrepApplyPage: React.FC = () => {
 
       setTimeout(() => {
         nav(`/interview/${applicant_id}/${interview_id}`);
-      }, 1000);
+      }, 3000);
     } catch (err: any) {
       console.error(err);
       setStatus("error");

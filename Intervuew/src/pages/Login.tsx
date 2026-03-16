@@ -63,10 +63,12 @@ const Login: React.FC = () => {
     const loginData = { email: data.email, password: data.password };
     try {
       if (type === "applicant") {
-        await api.post("/User/login/", loginData);
+        const res = await api.post("/User/login", loginData);
+        localStorage.setItem("user_id", res.data.id);
         nav("/dashboard");
       } else {
-        await api.post("/Organization/login/", loginData);
+        const res = await api.post("/Organization/login", loginData);
+        localStorage.setItem("org_id", res.data.id);
         nav("/org");
       }
     } catch (err: any) {
@@ -77,10 +79,12 @@ const Login: React.FC = () => {
   const createAccount = async (data: typeof formData, type: typeof role) => {
     try {
       if (type === "applicant") {
-        await api.post("/User/create", data);
+        const res = await api.post("/User/create", data);
+        localStorage.setItem("user_id", res.data.id);
         nav("/dashboard");
       } else {
-        await api.post("/Organization/create", data);
+        const res = await api.post("/Organization/create", data);
+        localStorage.setItem("org_id", res.data.id);
         nav("/org");
       }
     } catch (err: any) {

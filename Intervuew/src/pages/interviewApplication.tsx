@@ -235,35 +235,6 @@ export default function ApplyPage() {
                 </Typography>
               </Box>
             </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="overline">Requirements</Typography>
-              <Box
-                sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 1 }}
-              >
-                {(interviewData?.requirements ?? []).map((req, i) => (
-                  <Box
-                    key={i}
-                    sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                  >
-                    <Box
-                      sx={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: "50%",
-                        bgcolor: COLORS.textLight,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      {req}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
           </Box>
         </Box>
 

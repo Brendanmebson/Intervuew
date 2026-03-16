@@ -11,6 +11,20 @@ import { COLORS } from "../theme/theme";
 import { ApplicantDict, InterviewDict, TranscriptEntry } from "../types";
 import api from "../api/api";
 
+const NATIVE_SAMPLE_RATE = 48000;
+const TARGET_SAMPLE_RATE = 16000;
+const DOWNSAMPLE_RATIO = NATIVE_SAMPLE_RATE / TARGET_SAMPLE_RATE;
+const CHUNK_SAMPLES = TARGET_SAMPLE_RATE / 10;
+
+function downsampleBuffer(buffer: Float32Array, ratio: number): Float32Array {
+  const outputLength = Math.floor(buffer.length / ratio);
+  const result = new Float32Array(outputLength);
+  for (let i = 0; i < outputLength; i++) {
+    result[i] = buffer[Math.floor(i * ratio)];
+  }
+  return result;
+}
+
 const Interview: React.FC = () => {
   const nav = useNavigate();
   const [speaking, setSpeaking] = useState(false);
@@ -42,6 +56,8 @@ const Interview: React.FC = () => {
   const [isClosed, setIsClosed] = useState(false);
   const [closedReason, setClosedReason] =
     useState<string>("Session has closed");
+  const pcmBufferRef = useRef<Int16Array[]>([]);
+  const bufferedSamplesRef = useRef<number>(0);
 
   const [volume, setVolume] = useState(1);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
@@ -70,49 +86,57 @@ const Interview: React.FC = () => {
 
   const playPCM = (float32: Float32Array) => {
     if (!audioContextRef.current) return;
-
     const SERVER_SAMPLE_RATE = 24000;
-
     const audioBuffer = audioContextRef.current.createBuffer(
       1,
       float32.length,
       SERVER_SAMPLE_RATE,
     );
-
     audioBuffer.copyToChannel(new Float32Array(float32), 0);
-
     const ctx = audioContextRef.current;
     const currentTime = ctx.currentTime;
-
     if (nextPlayTimeRef.current < currentTime) {
       nextPlayTimeRef.current = currentTime;
     }
-
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
-
     if (gainNodeRef.current) {
       source.connect(gainNodeRef.current);
     } else {
       source.connect(ctx.destination);
     }
     source.start(nextPlayTimeRef.current);
-
     nextPlayTimeRef.current += audioBuffer.duration;
   };
 
-  const convertFloat32ToPCM = (inputData: Float32Array): ArrayBuffer => {
+  const convertFloat32ToPCM = (inputData: Float32Array): Int16Array => {
     const pcm16 = new Int16Array(inputData.length);
     for (let i = 0; i < inputData.length; i++) {
       const s = Math.max(-1, Math.min(1, inputData[i]));
       pcm16[i] = s * 32767;
     }
-    return pcm16.buffer;
+    return pcm16;
+  };
+
+  const flushAudioChunk = (ws: WebSocket) => {
+    const merged = new Int16Array(bufferedSamplesRef.current);
+    let offset = 0;
+    for (const chunk of pcmBufferRef.current) {
+      merged.set(chunk, offset);
+      offset += chunk.length;
+    }
+    pcmBufferRef.current = [];
+    bufferedSamplesRef.current = 0;
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(merged.buffer);
+    }
   };
 
   const startAudioInterview = async () => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = new AudioContext({
+        sampleRate: NATIVE_SAMPLE_RATE,
+      });
     }
     await audioContextRef.current.resume();
 
@@ -160,11 +184,9 @@ const Interview: React.FC = () => {
 
     ws.onclose = (event) => {
       setConnected(false);
-      if (event.code === 1008) {
-        setClosedReason(event.reason || "Session has closed");
-        setIsClosed(true);
-        stopRecording();
-      }
+      setClosedReason(event.reason || "Session has ended.");
+      setIsClosed(true);
+      stopRecording();
     };
 
     await audioContextRef.current.audioWorklet.addModule(
@@ -176,7 +198,7 @@ const Interview: React.FC = () => {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        sampleRate: 16000,
+        sampleRate: NATIVE_SAMPLE_RATE,
       },
     });
     const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -191,9 +213,15 @@ const Interview: React.FC = () => {
     ws.send(JSON.stringify({ mime_type: "audio/pcm" }));
 
     audioRecorderNode.port.onmessage = (event) => {
-      const data = convertFloat32ToPCM(event.data);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(data);
+      const downsampled = downsampleBuffer(
+        event.data as Float32Array,
+        DOWNSAMPLE_RATIO,
+      );
+      const pcm = convertFloat32ToPCM(downsampled);
+      pcmBufferRef.current.push(pcm);
+      bufferedSamplesRef.current += pcm.length;
+      if (bufferedSamplesRef.current >= CHUNK_SAMPLES) {
+        flushAudioChunk(ws);
       }
     };
   };
@@ -221,8 +249,9 @@ const Interview: React.FC = () => {
           resolve();
         };
         ws.onerror = () => {
-          reject(new Error("WebSocket failed to connect"));
+          setClosedReason("Connection error. Session has ended.");
           setIsClosed(true);
+          stopRecording();
         };
       });
 
@@ -320,9 +349,7 @@ const Interview: React.FC = () => {
 
   useEffect(() => {
     const t = setInterval(() => {
-      if (connected) {
-        setTimer((p) => p + 1);
-      }
+      if (connected) setTimer((p) => p + 1);
     }, 1000);
     return () => clearInterval(t);
   }, [connected]);
@@ -338,13 +365,11 @@ const Interview: React.FC = () => {
         const applicantData = applicantResponse.data;
         setInterview(interviewData);
         setApplicant(applicantData);
-
         if (interviewData.status === "closed") {
           setClosedReason("This interview has been closed.");
           setIsClosed(true);
           return;
         }
-
         if (applicantData.started_session) {
           setClosedReason("You have already completed this session.");
           setIsClosed(true);
@@ -363,9 +388,7 @@ const Interview: React.FC = () => {
   }, [transcript]);
 
   useEffect(() => {
-    if (isClosed) {
-      stopRecording();
-    }
+    if (isClosed) stopRecording();
   }, [isClosed]);
 
   const fmt = (seconds: number) => {
@@ -383,6 +406,8 @@ const Interview: React.FC = () => {
     workerRef.current?.terminate();
     if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     processedStreamRef.current?.getTracks().forEach((t) => t.stop());
+    pcmBufferRef.current = [];
+    bufferedSamplesRef.current = 0;
     setSessionStarted(false);
     setConnected(false);
     setSpeaking(false);
@@ -538,7 +563,7 @@ const Interview: React.FC = () => {
                   mb: "8px",
                 }}
               >
-                🔒
+                <Icon name="lock" size={18} color={COLORS.textMuted} />
               </Box>
               <Typography
                 sx={{ fontSize: 22, fontWeight: 700, color: "white" }}
@@ -630,7 +655,6 @@ const Interview: React.FC = () => {
                     <Icon name="brain" size={50} color="white" />
                   </Box>
                 </Box>
-
                 <Box
                   sx={{
                     height: "100%",
