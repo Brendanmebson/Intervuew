@@ -315,7 +315,7 @@ const Landing: React.FC = () => {
                   </Box>
                 }
               >
-                Watch Demo
+                Watch Demo Video
               </Button>
             </Box>
           </Box>
