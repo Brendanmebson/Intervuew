@@ -107,8 +107,13 @@ const OrgJobRoles: React.FC = () => {
       userLabel={orgName}
       userInitial={orgName?.[0] ?? "O"}
       navItems={[
-        { icon: "home", label: "Overview", active: true, to: `/org` },
-        { icon: "briefcase", label: "Job Roles", to: `/org/interview` },
+        { icon: "home", label: "Overview", to: `/org` },
+        {
+          icon: "briefcase",
+          label: "Job Roles",
+          active: true,
+          to: `/org/interview`,
+        },
         { icon: "users", label: "Candidates", to: `/org/applicants` },
         { icon: "chart", label: "Analytics", to: `/org/analytics` },
       ]}

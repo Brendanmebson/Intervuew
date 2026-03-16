@@ -52,7 +52,7 @@ const Interview: React.FC = () => {
   const [startVideoRequested, setStartVideoRequested] = useState(false);
   const lastSentRef = useRef<number>(0);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [isClosed, setIsClosed] = useState(false);
   const [closedReason, setClosedReason] =
     useState<string>("Session has closed");
@@ -67,15 +67,12 @@ const Interview: React.FC = () => {
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const response = await api.get("/User/me");
-        setUserId(response.data);
-      } catch (err) {
-        nav("/login");
-      }
-    };
-    fetchMe();
+    const userId = localStorage.getItem("user_id");
+    if (!userId) {
+      nav("/login");
+      return;
+    }
+    setUserId(userId);
   }, []);
 
   const handleVolumeChange = (_: Event, value: number | number[]) => {
@@ -145,7 +142,7 @@ const Interview: React.FC = () => {
     gainNodeRef.current.connect(audioContextRef.current.destination);
 
     const ws = new WebSocket(
-      `ws://localhost:8000/interview/start/${interviewId}/${applicantId}`,
+      `wss://interview-agent-435239562393.us-central1.run.app/interview/start/${interviewId}/${applicantId}`,
     );
     wsRef.current.audio = ws;
     ws.binaryType = "arraybuffer";
@@ -238,7 +235,7 @@ const Interview: React.FC = () => {
       });
 
       const ws = new WebSocket(
-        `ws://localhost:8000/interview/visual_interview/start/${interviewId}/${applicantId}`,
+        `wss://interview-agent-435239562393.us-central1.run.app/interview/visual_interview/start/${interviewId}/${applicantId}`,
       );
       wsRef.current.video = ws;
       ws.binaryType = "arraybuffer";
