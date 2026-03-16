@@ -41,6 +41,7 @@ const BARE_PREFIXES = [
   "/history",
   "/settings",
   "/org",
+  "/login",
 ];
 
 const ScrollToTop: React.FC = () => {
