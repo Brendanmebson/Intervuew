@@ -3,7 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom";
 import SidebarLayout from "../components/SidebarLayout";
-import { SoftCard, GradientButton, ScoreChip } from "../components/shared";
+import { SoftCard, ScoreChip } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
 import { STATUS_COLORS } from "../data/orgData";
@@ -68,7 +68,6 @@ const OrgCandidates: React.FC = () => {
     )
     .sort((a, b) => {
       if (sortBy === "score") return (b.score ?? -1) - (a.score ?? -1);
-      // sort by date descending, nulls last
       if (!a.interview_date && !b.interview_date) return 0;
       if (!a.interview_date) return 1;
       if (!b.interview_date) return -1;
@@ -116,10 +115,13 @@ const OrgCandidates: React.FC = () => {
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+          <Typography
+            variant="h4"
+            sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+          >
             Candidates
           </Typography>
-          <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+          <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
             {candidates.length} total · {counts.Recommended} recommended
           </Typography>
         </Box>
@@ -179,9 +181,9 @@ const OrgCandidates: React.FC = () => {
       {/* Search + Sort */}
       <Box
         className="fade-up-2"
-        sx={{ display: "flex", gap: "12px", mb: "18px" }}
+        sx={{ display: "flex", gap: "12px", mb: "18px", flexWrap: "wrap" }}
       >
-        <Box sx={{ flex: 1, position: "relative" }}>
+        <Box sx={{ flex: 1, minWidth: 160, position: "relative" }}>
           <Box
             sx={{
               position: "absolute",
@@ -209,6 +211,7 @@ const OrgCandidates: React.FC = () => {
               color: COLORS.text,
               outline: "none",
               "&:focus": { borderColor: COLORS.indigo },
+              boxSizing: "border-box",
             }}
           />
         </Box>
@@ -219,6 +222,7 @@ const OrgCandidates: React.FC = () => {
             borderRadius: "12px",
             border: "1px solid rgba(0,0,0,0.07)",
             overflow: "hidden",
+            flexShrink: 0,
           }}
         >
           {(
@@ -231,7 +235,7 @@ const OrgCandidates: React.FC = () => {
               key={val}
               onClick={() => setSortBy(val)}
               sx={{
-                px: "16px",
+                px: { xs: "10px", md: "16px" },
                 py: "10px",
                 fontSize: 13,
                 fontWeight: 600,
@@ -250,10 +254,10 @@ const OrgCandidates: React.FC = () => {
 
       {/* Table */}
       <SoftCard className="fade-up-3" sx={{ overflow: "hidden" }}>
-        {/* Table header */}
+        {/* Table header — hidden on mobile, shown on md+ */}
         <Box
           sx={{
-            display: "grid",
+            display: { xs: "none", md: "grid" },
             gridTemplateColumns: "2.2fr 1.5fr 1fr 1fr 1.2fr 0.5fr",
             gap: "12px",
             p: "14px 24px",
@@ -289,9 +293,12 @@ const OrgCandidates: React.FC = () => {
               onClick={() => nav(`/org/applicants/${c.id}`)}
               sx={{
                 display: "grid",
-                gridTemplateColumns: "2.2fr 1.5fr 1fr 1fr 1.2fr 0.5fr",
+                gridTemplateColumns: {
+                  xs: "1fr auto",
+                  md: "2.2fr 1.5fr 1fr 1fr 1.2fr 0.5fr",
+                },
                 gap: "12px",
-                p: "14px 24px",
+                p: { xs: "14px 16px", md: "14px 24px" },
                 borderBottom:
                   i < filtered.length - 1
                     ? "1px solid rgba(0,0,0,0.04)"
@@ -321,17 +328,47 @@ const OrgCandidates: React.FC = () => {
                 >
                   {c.name[0]}
                 </Box>
-                <Box>
-                  <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
                     {c.name}
                   </Typography>
-                  <Typography sx={{ fontSize: 11, color: COLORS.textMuted }}>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: COLORS.textMuted,
+                      display: { xs: "block", md: "none" },
+                    }}
+                  >
+                    {c.role} · {formatDate(c.interview_date)}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: COLORS.textMuted,
+                      display: { xs: "none", md: "block" },
+                    }}
+                  >
                     {c.ended_session ? "Completed" : "Not started"}
                   </Typography>
                 </Box>
               </Box>
 
-              <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+              {/* Desktop-only columns */}
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  display: { xs: "none", md: "block" },
+                }}
+              >
                 {c.role}
               </Typography>
 
@@ -340,36 +377,69 @@ const OrgCandidates: React.FC = () => {
                   fontSize: 13,
                   color: COLORS.textMuted,
                   fontFamily: "'DM Mono',monospace",
+                  display: { xs: "none", md: "block" },
                 }}
               >
                 {formatDate(c.interview_date)}
               </Typography>
 
-              {/* Score — show dash for pending */}
-              {c.score !== null ? (
-                <ScoreChip score={c.score} />
-              ) : (
-                <Typography sx={{ fontSize: 13, color: COLORS.textLight }}>
-                  —
-                </Typography>
-              )}
-
-              <Box
-                sx={{
-                  background: alpha(STATUS_COLORS[c.status], 0.1),
-                  color: STATUS_COLORS[c.status],
-                  borderRadius: "20px",
-                  px: "12px",
-                  py: "3px",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  display: "inline-block",
-                }}
-              >
-                {c.status}
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                {c.score !== null ? (
+                  <ScoreChip score={c.score} />
+                ) : (
+                  <Typography sx={{ fontSize: 13, color: COLORS.textLight }}>
+                    —
+                  </Typography>
+                )}
               </Box>
 
-              <Typography sx={{ color: COLORS.textLight, fontSize: 16 }}>
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                <Box
+                  sx={{
+                    background: alpha(STATUS_COLORS[c.status], 0.1),
+                    color: STATUS_COLORS[c.status],
+                    borderRadius: "20px",
+                    px: "12px",
+                    py: "3px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    display: "inline-block",
+                  }}
+                >
+                  {c.status}
+                </Box>
+              </Box>
+
+              {/* Mobile: status badge + arrow */}
+              <Box
+                sx={{
+                  display: { xs: "flex", md: "none" },
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Box
+                  sx={{
+                    background: alpha(STATUS_COLORS[c.status], 0.1),
+                    color: STATUS_COLORS[c.status],
+                    borderRadius: "20px",
+                    px: "10px",
+                    py: "3px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {c.status}
+                </Box>
+              </Box>
+
+              <Typography
+                sx={{
+                  color: COLORS.textLight,
+                  fontSize: 16,
+                  display: { xs: "none", md: "block" },
+                }}
+              >
                 →
               </Typography>
             </Box>

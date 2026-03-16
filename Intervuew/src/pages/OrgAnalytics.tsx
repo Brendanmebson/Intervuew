@@ -93,7 +93,6 @@ const OrgAnalytics: React.FC = () => {
     fetchAll();
   }, []);
 
-  // All applicants flat
   const allApplicants = jobs.flatMap((j) =>
     j.applicants.map((a) => ({
       ...a.applicant,
@@ -121,7 +120,6 @@ const OrgAnalytics: React.FC = () => {
   const conversionRate =
     totalCandidates > 0 ? Math.round((recommended / totalCandidates) * 100) : 0;
 
-  // Status funnel
   const funnel = [
     {
       label: "Pending",
@@ -137,12 +135,10 @@ const OrgAnalytics: React.FC = () => {
     },
   ];
 
-  // Top 5 roles by applicant count
   const top5Roles = [...jobs]
     .sort((a, b) => b.applicants.length - a.applicants.length)
     .slice(0, 5);
 
-  // Score distribution per role — buckets based on each role's avg score
   const roleScoreData = top5Roles.map((j, i) => {
     const scores = j.applicants
       .map((a) => a.report?.score)
@@ -161,7 +157,6 @@ const OrgAnalytics: React.FC = () => {
 
   const maxAvg = Math.max(...roleScoreData.map((r) => r.avg), 1);
 
-  // Per-role stats table
   const roleStats = jobs
     .map((j) => {
       const scores = j.applicants
@@ -201,10 +196,13 @@ const OrgAnalytics: React.FC = () => {
       ]}
     >
       <Box className="fade-up" sx={{ mb: "28px" }}>
-        <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+        <Typography
+          variant="h4"
+          sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+        >
           Analytics
         </Typography>
-        <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+        <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
           Performance insights across all roles and candidates.
         </Typography>
       </Box>
@@ -214,7 +212,7 @@ const OrgAnalytics: React.FC = () => {
         className="fade-up-1"
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
+          gridTemplateColumns: { xs: "repeat(2,1fr)", md: "repeat(4,1fr)" },
           gap: "13px",
           mb: "22px",
         }}
@@ -249,10 +247,10 @@ const OrgAnalytics: React.FC = () => {
             sub: "to recommended",
           },
         ].map((s) => (
-          <SoftCard key={s.label} sx={{ p: "20px 22px" }}>
+          <SoftCard key={s.label} sx={{ p: { xs: "16px", md: "20px 22px" } }}>
             <Typography
               sx={{
-                fontSize: 11,
+                fontSize: { xs: 9, md: 11 },
                 fontWeight: 600,
                 color: COLORS.textMuted,
                 letterSpacing: "0.05em",
@@ -264,7 +262,7 @@ const OrgAnalytics: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                fontSize: 34,
+                fontSize: { xs: 26, md: 34 },
                 fontWeight: 700,
                 letterSpacing: "-0.04em",
                 color: s.color,
@@ -281,18 +279,18 @@ const OrgAnalytics: React.FC = () => {
         ))}
       </Box>
 
-      {/* Score distribution (top 5 roles) + Funnel */}
+      {/* Score distribution + Funnel */}
       <Box
         className="fade-up-2"
         sx={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
           gap: "18px",
           mb: "18px",
         }}
       >
-        {/* Score distribution — top 5 roles bar chart */}
-        <SoftCard sx={{ p: "26px 28px" }}>
+        {/* Score distribution */}
+        <SoftCard sx={{ p: { xs: "20px", md: "26px 28px" } }}>
           <Typography variant="h6" sx={{ fontSize: 15, mb: "6px" }}>
             Score Distribution
           </Typography>
@@ -363,7 +361,6 @@ const OrgAnalytics: React.FC = () => {
             </Box>
           )}
 
-          {/* Legend */}
           <Box
             sx={{ display: "flex", gap: "10px", flexWrap: "wrap", mt: "4px" }}
           >
@@ -389,7 +386,7 @@ const OrgAnalytics: React.FC = () => {
         </SoftCard>
 
         {/* Candidate funnel */}
-        <SoftCard sx={{ p: "26px 28px" }}>
+        <SoftCard sx={{ p: { xs: "20px", md: "26px 28px" } }}>
           <Typography variant="h6" sx={{ fontSize: 15, mb: "20px" }}>
             Candidate Funnel
           </Typography>
@@ -445,7 +442,7 @@ const OrgAnalytics: React.FC = () => {
       </Box>
 
       {/* Role performance table */}
-      <SoftCard className="fade-up-3" sx={{ p: "26px 28px" }}>
+      <SoftCard className="fade-up-3" sx={{ p: { xs: "20px", md: "26px 28px" }, overflowX: "auto" }}>
         <Typography variant="h6" sx={{ fontSize: 15, mb: "18px" }}>
           Performance by Role
         </Typography>
@@ -454,7 +451,7 @@ const OrgAnalytics: React.FC = () => {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "2fr 1fr 1fr 1fr 80px",
+            gridTemplateColumns: { xs: "2fr 1fr 1fr 80px", md: "2fr 1fr 1fr 1fr 80px" },
             gap: "12px",
             pb: "10px",
             borderBottom: "1px solid rgba(0,0,0,0.06)",
@@ -463,10 +460,11 @@ const OrgAnalytics: React.FC = () => {
             color: COLORS.textLight,
             letterSpacing: "0.06em",
             textTransform: "uppercase",
+            minWidth: { xs: 340, md: "auto" },
           }}
         >
-          {["Role", "Applicants", "Recommended", "Avg Score", ""].map((h) => (
-            <Box key={h}>{h}</Box>
+          {["Role", "Applicants", "Recommended", "Avg Score", ""].map((h, i) => (
+            <Box key={h} sx={{ display: i === 2 ? { xs: "none", md: "block" } : "block" }}>{h}</Box>
           ))}
         </Box>
 
@@ -489,7 +487,7 @@ const OrgAnalytics: React.FC = () => {
               onClick={() => nav(`/org/interview/${r.id}`)}
               sx={{
                 display: "grid",
-                gridTemplateColumns: "2fr 1fr 1fr 1fr 80px",
+                gridTemplateColumns: { xs: "2fr 1fr 1fr 80px", md: "2fr 1fr 1fr 1fr 80px" },
                 gap: "12px",
                 py: "13px",
                 borderBottom:
@@ -501,19 +499,22 @@ const OrgAnalytics: React.FC = () => {
                 borderRadius: "8px",
                 transition: "background 0.15s",
                 "&:hover": { background: alpha(COLORS.indigo, 0.03) },
+                minWidth: { xs: 340, md: "auto" },
               }}
             >
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
+              <Typography sx={{ fontSize: { xs: 13, md: 14 }, fontWeight: 600 }}>
                 {r.role}
               </Typography>
               <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
                 {r.total}
               </Typography>
-              <Typography
-                sx={{ fontSize: 13, color: COLORS.green, fontWeight: 600 }}
-              >
-                {r.recommended}
-              </Typography>
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                <Typography
+                  sx={{ fontSize: 13, color: COLORS.green, fontWeight: 600 }}
+                >
+                  {r.recommended}
+                </Typography>
+              </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <Box
                   sx={{
@@ -522,6 +523,7 @@ const OrgAnalytics: React.FC = () => {
                     borderRadius: 3,
                     background: "#F3F4F6",
                     overflow: "hidden",
+                    display: { xs: "none", sm: "block" },
                   }}
                 >
                   <Box

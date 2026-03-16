@@ -137,25 +137,36 @@ const OrgCandidateDetail: React.FC = () => {
         >
           ← Back to Candidates
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: { xs: "flex-start", sm: "center" },
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
           <Box
             sx={{
-              width: 56,
-              height: 56,
+              width: { xs: 44, md: 56 },
+              height: { xs: 44, md: 56 },
               borderRadius: "50%",
               background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 22,
+              fontSize: { xs: 18, md: 22 },
               fontWeight: 700,
               color: "white",
+              flexShrink: 0,
             }}
           >
             {candidate.name[0]}
           </Box>
           <Box>
-            <Typography variant="h4" sx={{ fontSize: 24, mb: "4px" }}>
+            <Typography
+              variant="h4"
+              sx={{ fontSize: { xs: 20, md: 24 }, mb: "4px" }}
+            >
               {candidate.name}
             </Typography>
             <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
@@ -170,10 +181,10 @@ const OrgCandidateDetail: React.FC = () => {
       <SoftCard
         className="fade-up-1"
         sx={{
-          p: "20px 26px",
+          p: { xs: "16px", md: "20px 26px" },
           mb: "18px",
           display: "flex",
-          gap: "28px",
+          gap: { xs: "16px", md: "28px" },
           flexWrap: "wrap",
           alignItems: "center",
         }}
@@ -221,7 +232,7 @@ const OrgCandidateDetail: React.FC = () => {
         ))}
 
         {/* Status badge */}
-        <Box sx={{ ml: "auto" }}>
+        <Box sx={{ ml: { xs: 0, md: "auto" } }}>
           <Box
             sx={{
               background: alpha(STATUS_COLORS[candidate.status], 0.1),
@@ -231,6 +242,7 @@ const OrgCandidateDetail: React.FC = () => {
               py: "5px",
               fontSize: 13,
               fontWeight: 700,
+              display: "inline-block",
             }}
           >
             {candidate.status}
@@ -243,7 +255,7 @@ const OrgCandidateDetail: React.FC = () => {
         className="fade-up-2"
         sx={{
           display: "grid",
-          gridTemplateColumns: "auto 1fr",
+          gridTemplateColumns: { xs: "1fr", sm: "auto 1fr" },
           gap: "18px",
           mb: "18px",
         }}
@@ -255,7 +267,7 @@ const OrgCandidateDetail: React.FC = () => {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            minWidth: 200,
+            minWidth: { sm: 200 },
           }}
         >
           <Typography
@@ -282,7 +294,7 @@ const OrgCandidateDetail: React.FC = () => {
         </SoftCard>
 
         {/* Cheating indicator */}
-        <SoftCard sx={{ p: "28px 32px" }}>
+        <SoftCard sx={{ p: { xs: "20px", md: "28px 32px" } }}>
           <Typography
             sx={{
               fontSize: 11,
@@ -314,7 +326,7 @@ const OrgCandidateDetail: React.FC = () => {
             <Box
               sx={{
                 display: "flex",
-                alignItems: "center",
+                alignItems: { xs: "flex-start", sm: "center" },
                 gap: "14px",
                 p: "16px 20px",
                 borderRadius: "14px",
@@ -326,6 +338,7 @@ const OrgCandidateDetail: React.FC = () => {
                     ? alpha("#ef4444", 0.2)
                     : alpha(COLORS.green, 0.2)
                 }`,
+                flexWrap: "wrap",
               }}
             >
               <Box
@@ -373,7 +386,7 @@ const OrgCandidateDetail: React.FC = () => {
 
       {/* Proctoring alerts table */}
       {alerts.length > 0 && (
-        <SoftCard className="fade-up-3" sx={{ p: "26px 30px" }}>
+        <SoftCard className="fade-up-3" sx={{ p: { xs: "20px", md: "26px 30px" } }}>
           <Typography
             sx={{
               fontSize: 11,
@@ -387,11 +400,10 @@ const OrgCandidateDetail: React.FC = () => {
             Proctoring Alerts · {alerts.length} flagged
           </Typography>
 
-          {/* Table header */}
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "140px 1fr",
+              gridTemplateColumns: "120px 1fr",
               gap: "12px",
               p: "10px 16px",
               borderRadius: "10px 10px 0 0",
@@ -408,7 +420,6 @@ const OrgCandidateDetail: React.FC = () => {
             <Box>Reason</Box>
           </Box>
 
-          {/* Table rows */}
           <Box
             sx={{
               border: "1px solid rgba(0,0,0,0.06)",
@@ -422,7 +433,7 @@ const OrgCandidateDetail: React.FC = () => {
                 key={i}
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "140px 1fr",
+                  gridTemplateColumns: "120px 1fr",
                   gap: "12px",
                   p: "12px 16px",
                   alignItems: "center",

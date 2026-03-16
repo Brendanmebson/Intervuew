@@ -97,7 +97,6 @@ const OrgDash: React.FC = () => {
     fetchAll();
   }, []);
 
-  // Derived stats
   const activeRoles = jobs.filter((j) => j.interview.status === "active");
 
   const allApplicants = jobs.flatMap((j) =>
@@ -152,15 +151,20 @@ const OrgDash: React.FC = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: "32px",
+          gap: "12px",
+          flexWrap: "wrap",
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+          <Typography
+            variant="h4"
+            sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+          >
             Organization Dashboard
           </Typography>
-          <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+          <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
             Manage interviews, candidates, and analytics.
           </Typography>
         </Box>
@@ -174,7 +178,7 @@ const OrgDash: React.FC = () => {
         className="fade-up-1"
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
+          gridTemplateColumns: { xs: "repeat(2,1fr)", md: "repeat(4,1fr)" },
           gap: "13px",
           mb: "22px",
         }}
@@ -207,12 +211,12 @@ const OrgDash: React.FC = () => {
         ].map((c) => (
           <SoftCard
             key={c.label}
-            sx={{ p: "20px 22px", cursor: "pointer" }}
+            sx={{ p: { xs: "16px", md: "20px 22px" }, cursor: "pointer" }}
             onClick={() => nav(c.to)}
           >
             <Typography
               sx={{
-                fontSize: 11,
+                fontSize: { xs: 9, md: 11 },
                 fontWeight: 600,
                 color: COLORS.textMuted,
                 letterSpacing: "0.05em",
@@ -224,7 +228,7 @@ const OrgDash: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                fontSize: 36,
+                fontSize: { xs: 28, md: 36 },
                 fontWeight: 700,
                 letterSpacing: "-0.04em",
                 color: c.color,
@@ -240,7 +244,7 @@ const OrgDash: React.FC = () => {
       {/* Recent candidates table */}
       <SoftCard
         className="fade-up-2"
-        sx={{ p: "26px", overflow: "hidden", mb: "22px" }}
+        sx={{ p: { xs: "20px", md: "26px" }, overflow: "hidden", mb: "22px" }}
       >
         <Box
           sx={{
@@ -270,7 +274,7 @@ const OrgDash: React.FC = () => {
         {/* Table header */}
         <Box
           sx={{
-            display: "grid",
+            display: { xs: "none", md: "grid" },
             gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1.3fr",
             gap: "12px",
             pb: "11px",
@@ -306,7 +310,10 @@ const OrgDash: React.FC = () => {
               onClick={() => nav(`/org/applicants/${c.id}`)}
               sx={{
                 display: "grid",
-                gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1.3fr",
+                gridTemplateColumns: {
+                  xs: "1fr auto",
+                  md: "2fr 1.5fr 1fr 1fr 1.3fr",
+                },
                 gap: "12px",
                 py: "13px",
                 borderBottom:
@@ -338,11 +345,36 @@ const OrgDash: React.FC = () => {
                 >
                   {c.name[0]}
                 </Box>
-                <Typography sx={{ fontSize: 14, fontWeight: 600 }}>
-                  {c.name}
-                </Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    sx={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {c.name}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: COLORS.textMuted,
+                      display: { xs: "block", md: "none" },
+                    }}
+                  >
+                    {c.role}
+                  </Typography>
+                </Box>
               </Box>
-              <Typography sx={{ fontSize: 13, color: COLORS.textMuted }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  color: COLORS.textMuted,
+                  display: { xs: "none", md: "block" },
+                }}
+              >
                 {c.role}
               </Typography>
               <Typography
@@ -350,6 +382,7 @@ const OrgDash: React.FC = () => {
                   fontSize: 13,
                   color: COLORS.textMuted,
                   fontFamily: "'DM Mono',monospace",
+                  display: { xs: "none", md: "block" },
                 }}
               >
                 {formatDate(c.interview_date)}
@@ -363,6 +396,7 @@ const OrgDash: React.FC = () => {
                     c.report?.score !== null && c.report?.score !== undefined
                       ? COLORS.text
                       : COLORS.textLight,
+                  display: { xs: "none", md: "block" },
                 }}
               >
                 {c.report?.score ?? "—"}
@@ -427,14 +461,15 @@ const OrgDash: React.FC = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2,1fr)",
+                md: "repeat(3,1fr)",
+              },
               gap: "13px",
             }}
           >
             {activeRoles.slice(0, 3).map((j) => {
-              const recommended = j.applicants.filter(
-                (a) => getStatus(a.applicant, a.report) === "Recommended",
-              ).length;
               const scoresArr = j.applicants
                 .map((a) => a.report?.score)
                 .filter((s): s is number => s !== null && s !== undefined);
@@ -472,8 +507,16 @@ const OrgDash: React.FC = () => {
                     >
                       <Icon name="briefcase" size={15} color={COLORS.indigo} />
                     </Box>
-                    <Box>
-                      <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: 14,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {j.interview.role}
                       </Typography>
                       <Typography

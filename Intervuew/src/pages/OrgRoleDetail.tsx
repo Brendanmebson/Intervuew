@@ -6,7 +6,6 @@ import SidebarLayout from "../components/SidebarLayout";
 import { SoftCard, GradientButton, ScoreChip } from "../components/shared";
 import { Icon } from "../components/Icons";
 import { COLORS } from "../theme/theme";
-
 import api from "../api/api";
 
 interface Interview {
@@ -101,7 +100,6 @@ const OrgRoleDetail: React.FC = () => {
         setLoading(false);
       }
 
-      // Non-critical
       try {
         const nameRes = await api.get("/Organization");
         setOrgName(nameRes.data.name);
@@ -227,19 +225,29 @@ const OrgRoleDetail: React.FC = () => {
           sx={{
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "flex-start",
+            alignItems: { xs: "flex-start", sm: "center" },
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: { xs: "flex-start", sm: "center" },
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
             <Box
               sx={{
-                width: 52,
-                height: 52,
+                width: { xs: 42, md: 52 },
+                height: { xs: 42, md: 52 },
                 borderRadius: "15px",
                 background: alpha(COLORS.indigo, 0.1),
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
               <Icon name="briefcase" size={22} color={COLORS.indigo} />
@@ -251,9 +259,13 @@ const OrgRoleDetail: React.FC = () => {
                   alignItems: "center",
                   gap: "10px",
                   mb: "4px",
+                  flexWrap: "wrap",
                 }}
               >
-                <Typography variant="h4" sx={{ fontSize: 24 }}>
+                <Typography
+                  variant="h4"
+                  sx={{ fontSize: { xs: 18, md: 24 } }}
+                >
                   {interview.role}
                 </Typography>
                 <Box
@@ -302,15 +314,16 @@ const OrgRoleDetail: React.FC = () => {
       <SoftCard
         className="fade-up-1"
         sx={{
-          p: "16px 22px",
+          p: { xs: "14px 16px", md: "16px 22px" },
           mb: "18px",
           display: "flex",
           alignItems: "center",
           gap: "14px",
+          flexWrap: "wrap",
         }}
       >
         <Icon name="link" size={15} color={COLORS.indigo} />
-        <Box sx={{ flex: 1, overflow: "hidden" }}>
+        <Box sx={{ flex: 1, overflow: "hidden", minWidth: 0 }}>
           <Typography
             sx={{
               fontSize: 10,
@@ -362,8 +375,8 @@ const OrgRoleDetail: React.FC = () => {
         className="fade-up-2"
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: "13px",
+          gridTemplateColumns: { xs: "repeat(3,1fr)" },
+          gap: { xs: "10px", md: "13px" },
           mb: "22px",
         }}
       >
@@ -380,10 +393,10 @@ const OrgRoleDetail: React.FC = () => {
           },
           { label: "Recommended", val: recommendedCount, color: COLORS.green },
         ].map((s) => (
-          <SoftCard key={s.label} sx={{ p: "18px 22px" }}>
+          <SoftCard key={s.label} sx={{ p: { xs: "14px", md: "18px 22px" } }}>
             <Typography
               sx={{
-                fontSize: 11,
+                fontSize: { xs: 9, md: 11 },
                 fontWeight: 600,
                 color: COLORS.textMuted,
                 letterSpacing: "0.05em",
@@ -395,7 +408,7 @@ const OrgRoleDetail: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                fontSize: 32,
+                fontSize: { xs: 24, md: 32 },
                 fontWeight: 700,
                 color: s.color,
                 lineHeight: 1,
@@ -408,7 +421,10 @@ const OrgRoleDetail: React.FC = () => {
       </Box>
 
       {/* Description + Skills */}
-      <SoftCard className="fade-up-3" sx={{ p: "26px 28px", mb: "22px" }}>
+      <SoftCard
+        className="fade-up-3"
+        sx={{ p: { xs: "20px", md: "26px 28px" }, mb: "22px" }}
+      >
         <Typography variant="h6" sx={{ fontSize: 14, mb: "12px" }}>
           Role Description
         </Typography>
@@ -487,11 +503,12 @@ const OrgRoleDetail: React.FC = () => {
                 <SoftCard
                   key={applicant.id}
                   sx={{
-                    p: "18px 24px",
+                    p: { xs: "14px 16px", md: "18px 24px" },
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     gap: "14px",
+                    flexWrap: "wrap",
                   }}
                   onClick={() => nav(`/org/applicants/${applicant.id}`)}
                 >
@@ -512,9 +529,16 @@ const OrgRoleDetail: React.FC = () => {
                   >
                     {applicant.name[0]}
                   </Box>
-                  <Box sx={{ flex: 1 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
-                      sx={{ fontWeight: 600, fontSize: 14, mb: "2px" }}
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: 14,
+                        mb: "2px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
                     >
                       {applicant.name}
                     </Typography>
@@ -532,6 +556,7 @@ const OrgRoleDetail: React.FC = () => {
                       py: "3px",
                       fontSize: 12,
                       fontWeight: 700,
+                      flexShrink: 0,
                     }}
                   >
                     {status}
@@ -539,7 +564,13 @@ const OrgRoleDetail: React.FC = () => {
                   {report?.score !== null && report?.score !== undefined && (
                     <ScoreChip score={report.score} />
                   )}
-                  <Typography sx={{ color: COLORS.textLight, fontSize: 16 }}>
+                  <Typography
+                    sx={{
+                      color: COLORS.textLight,
+                      fontSize: 16,
+                      display: { xs: "none", sm: "block" },
+                    }}
+                  >
                     →
                   </Typography>
                 </SoftCard>

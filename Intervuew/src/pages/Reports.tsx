@@ -84,8 +84,6 @@ const Reports: React.FC = () => {
 
   const bestScore = scoresOnly.length > 0 ? Math.max(...scoresOnly) : null;
 
-  const completedSessions = sessions.filter((s) => s.ended_session);
-
   const sortedByDate = [...sessions]
     .filter((s) => s.score !== null && s.interview_date)
     .sort(
@@ -121,10 +119,13 @@ const Reports: React.FC = () => {
     >
       {/* Header */}
       <Box className="fade-up" sx={{ mb: "28px" }}>
-        <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+        <Typography
+          variant="h4"
+          sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+        >
           Analytics & Reports
         </Typography>
-        <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+        <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
           Performance overview across all prep sessions
         </Typography>
       </Box>
@@ -134,7 +135,7 @@ const Reports: React.FC = () => {
         className="fade-up-1"
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: { xs: "repeat(2,1fr)", md: "repeat(4, 1fr)" },
           gap: "14px",
           mb: "22px",
         }}
@@ -175,10 +176,10 @@ const Reports: React.FC = () => {
             sub: "vs. first session",
           },
         ].map((s) => (
-          <SoftCard key={s.label} sx={{ p: "22px 24px" }}>
+          <SoftCard key={s.label} sx={{ p: { xs: "14px", md: "22px 24px" } }}>
             <Typography
               sx={{
-                fontSize: 11,
+                fontSize: { xs: 9, md: 11 },
                 fontWeight: 600,
                 color: COLORS.textMuted,
                 letterSpacing: "0.05em",
@@ -190,7 +191,7 @@ const Reports: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                fontSize: 32,
+                fontSize: { xs: 26, md: 32 },
                 fontWeight: 700,
                 letterSpacing: "-0.04em",
                 color: s.color,
@@ -201,7 +202,7 @@ const Reports: React.FC = () => {
               {s.val}
               {s.unit}
             </Typography>
-            <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+            <Typography sx={{ fontSize: { xs: 11, md: 12 }, color: COLORS.textMuted }}>
               {s.sub}
             </Typography>
           </SoftCard>
@@ -209,7 +210,10 @@ const Reports: React.FC = () => {
       </Box>
 
       {/* Score progression */}
-      <SoftCard className="fade-up-2" sx={{ p: "28px 30px", mb: "18px" }}>
+      <SoftCard
+        className="fade-up-2"
+        sx={{ p: { xs: "20px", md: "28px 30px" }, mb: "18px" }}
+      >
         <Typography variant="h6" sx={{ fontSize: 15, mb: "22px" }}>
           Score Progression
         </Typography>
@@ -223,7 +227,7 @@ const Reports: React.FC = () => {
             sx={{
               display: "flex",
               alignItems: "flex-end",
-              gap: "10px",
+              gap: { xs: "6px", md: "10px" },
               height: 120,
             }}
           >
@@ -311,18 +315,18 @@ const Reports: React.FC = () => {
                 <SoftCard
                   key={s.applicant_id}
                   sx={{
-                    p: "18px 22px",
+                    p: { xs: "14px 16px", md: "18px 22px" },
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
-                    gap: "16px",
+                    gap: { xs: "12px", md: "16px" },
                   }}
                   onClick={() => nav(`/report/${s.interview.id}`)}
                 >
                   <Box
                     sx={{
-                      width: 38,
-                      height: 38,
+                      width: { xs: 34, md: 38 },
+                      height: { xs: 34, md: 38 },
                       borderRadius: "11px",
                       background: alpha(COLORS.indigo, 0.08),
                       display: "flex",
@@ -333,13 +337,25 @@ const Reports: React.FC = () => {
                   >
                     <Icon name="briefcase" size={16} color={COLORS.indigo} />
                   </Box>
-                  <Box sx={{ flex: 1 }}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
-                      sx={{ fontWeight: 600, fontSize: 14, mb: "2px" }}
+                      sx={{
+                        fontWeight: 600,
+                        fontSize: { xs: 13, md: 14 },
+                        mb: "2px",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
                     >
                       {s.interview.role}
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: COLORS.textMuted }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: 11, md: 12 },
+                        color: COLORS.textMuted,
+                      }}
+                    >
                       {formatDate(s.interview_date ?? s.interview.start_date)} ·{" "}
                       {s.interview.duration} min ·{" "}
                       {s.ended_session
@@ -356,7 +372,13 @@ const Reports: React.FC = () => {
                       —
                     </Typography>
                   )}
-                  <Typography sx={{ color: COLORS.textLight, fontSize: 16 }}>
+                  <Typography
+                    sx={{
+                      color: COLORS.textLight,
+                      fontSize: 16,
+                      display: { xs: "none", sm: "block" },
+                    }}
+                  >
                     →
                   </Typography>
                 </SoftCard>

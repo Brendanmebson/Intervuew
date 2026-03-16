@@ -152,7 +152,7 @@ export default function ApplyPage() {
         minHeight: "100vh",
         bgcolor: COLORS.bg,
         display: "flex",
-        alignItems: "center",
+        alignItems: { xs: "flex-start", md: "center" },
         justifyContent: "center",
         p: { xs: 2, md: 4 },
       }}
@@ -176,7 +176,7 @@ export default function ApplyPage() {
             overflow: "hidden",
           }}
         >
-          <Box sx={{ p: 3, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+          <Box sx={{ p: { xs: 2, md: 3 }, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
             <Chip
               label={
                 interviewData
@@ -197,14 +197,16 @@ export default function ApplyPage() {
                 fontWeight: 600,
               }}
             />
-            <Typography variant="h5">{interviewData?.role ?? "—"}</Typography>
+            <Typography variant="h5" sx={{ fontSize: { xs: "1.1rem", md: "1.5rem" } }}>
+              {interviewData?.role ?? "—"}
+            </Typography>
             <Typography variant="body2" color="text.secondary">
               {interviewData?.type ?? "—"}
             </Typography>
           </Box>
 
           <Box
-            sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}
+            sx={{ p: { xs: 2, md: 3 }, display: "flex", flexDirection: "column", gap: 2.5 }}
           >
             <Box>
               <Typography variant="overline">Description</Typography>
@@ -247,7 +249,7 @@ export default function ApplyPage() {
             overflow: "hidden",
           }}
         >
-          <Box sx={{ p: 3, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+          <Box sx={{ p: { xs: 2, md: 3 }, borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
             <Chip
               label="Application form"
               size="small"
@@ -258,13 +260,15 @@ export default function ApplyPage() {
                 fontWeight: 600,
               }}
             />
-            <Typography variant="h5">Apply for this role</Typography>
+            <Typography variant="h5" sx={{ fontSize: { xs: "1.1rem", md: "1.5rem" } }}>
+              Apply for this role
+            </Typography>
             <Typography variant="body2" color="text.secondary">
               Fill in your details and upload your resume.
             </Typography>
           </Box>
           <Box
-            sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}
+            sx={{ p: { xs: 2, md: 3 }, display: "flex", flexDirection: "column", gap: 2.5 }}
           >
             {/* Name */}
             <Box>
@@ -290,6 +294,7 @@ export default function ApplyPage() {
                   outline: "none",
                   background: "#FAFAFA",
                   color: COLORS.text,
+                  boxSizing: "border-box",
                 }}
               />
               {errors.name && (
@@ -325,7 +330,7 @@ export default function ApplyPage() {
                 sx={{
                   border: `1.5px dashed ${dragOver ? COLORS.indigo : "rgba(0,0,0,0.12)"}`,
                   borderRadius: RADIUS.input,
-                  p: 3,
+                  p: { xs: 2, md: 3 },
                   textAlign: "center",
                   cursor: "pointer",
                   transition: "all 0.15s",
@@ -402,7 +407,13 @@ export default function ApplyPage() {
                   </svg>
                   <Typography
                     variant="caption"
-                    sx={{ color: COLORS.green, fontWeight: 600 }}
+                    sx={{
+                      color: COLORS.green,
+                      fontWeight: 600,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
                     {file.name}
                   </Typography>

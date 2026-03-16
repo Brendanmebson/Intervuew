@@ -94,7 +94,7 @@ const HeroMockup = () => (
       sx={{
         position: "absolute",
         top: -20,
-        right: -28,
+        right: { xs: -8, md: -28 },
         background: "#fff",
         border: `1px solid ${alpha(COLORS.indigo, 0.12)}`,
         borderRadius: 1,
@@ -155,7 +155,7 @@ const HeroMockup = () => (
       sx={{
         position: "absolute",
         bottom: -16,
-        left: -20,
+        left: { xs: -8, md: -20 },
         background: "#fff",
         border: `1px solid ${alpha("#22C55E", 0.2)}`,
         borderRadius: 2,
@@ -250,7 +250,7 @@ const Landing: React.FC = () => {
           maxWidth: 1280,
           mx: "auto",
           px: { xs: 3, md: 6 },
-          pt: { xs: 5, md: 15 },
+          pt: { xs: 10, md: 15 },
           pb: { xs: 8, md: 14 },
         }}
       >
@@ -258,14 +258,14 @@ const Landing: React.FC = () => {
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
+            gap: { xs: 4, md: 8 },
             flexWrap: "wrap",
           }}
         >
-          <Box sx={{ flex: "1 1 460px", maxWidth: 560 }}>
+          <Box sx={{ flex: "1 1 300px", maxWidth: 560 }}>
             <Typography
               variant="h1"
-              sx={{ mb: 2.5, fontSize: { xs: "2.5rem", md: "3.75rem" } }}
+              sx={{ mb: 2.5, fontSize: { xs: "2rem", md: "3.75rem" } }}
             >
               AI Interviews That{" "}
               <Box
@@ -284,7 +284,7 @@ const Landing: React.FC = () => {
               sx={{
                 color: "#5A5E72",
                 mb: 4,
-                fontSize: "1.125rem",
+                fontSize: { xs: "1rem", md: "1.125rem" },
                 maxWidth: 440,
               }}
             >
@@ -315,18 +315,19 @@ const Landing: React.FC = () => {
                   </Box>
                 }
               >
-                Watch Demo Video
+                Watch Demo
               </Button>
             </Box>
           </Box>
 
           <Box
             sx={{
-              flex: "1 1 380px",
+              flex: "1 1 300px",
               display: "flex",
               justifyContent: "center",
               position: "relative",
-              mt: { xs: 4, md: 0 },
+              mt: { xs: 6, md: 0 },
+              px: { xs: "20px", md: 0 },
             }}
           >
             <Box
@@ -358,12 +359,12 @@ const Landing: React.FC = () => {
           <Box
             sx={{
               display: "flex",
-              gap: 8,
+              gap: { xs: 4, md: 8 },
               flexWrap: "wrap",
               alignItems: "flex-start",
             }}
           >
-            <Box sx={{ flex: "1 1 360px", maxWidth: 440 }}>
+            <Box sx={{ flex: "1 1 280px", maxWidth: 440 }}>
               <Typography
                 variant="overline"
                 sx={{ color: COLORS.indigo, mb: 2, display: "block" }}
@@ -372,7 +373,7 @@ const Landing: React.FC = () => {
               </Typography>
               <Typography
                 variant="h2"
-                sx={{ mb: 2.5, fontSize: { xs: "2rem", md: "2.5rem" } }}
+                sx={{ mb: 2.5, fontSize: { xs: "1.6rem", md: "2.5rem" } }}
               >
                 Screening is slow,{" "}
                 <Box
@@ -392,7 +393,7 @@ const Landing: React.FC = () => {
             </Box>
             <Box
               sx={{
-                flex: "1 1 400px",
+                flex: "1 1 300px",
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
@@ -452,12 +453,19 @@ const Landing: React.FC = () => {
             </Typography>
             <Typography
               variant="h2"
-              sx={{ fontSize: { xs: "1.875rem", md: "2.5rem" } }}
+              sx={{ fontSize: { xs: "1.6rem", md: "2.5rem" } }}
             >
               Three steps to smarter hiring
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 3,
+              flexWrap: "wrap",
+              flexDirection: { xs: "column", md: "row" },
+            }}
+          >
             <Box
               sx={{
                 flex: "1 1 300px",
@@ -468,7 +476,7 @@ const Landing: React.FC = () => {
             >
               <SoftCard
                 sx={{
-                  p: 4,
+                  p: { xs: 3, md: 4 },
                   background:
                     "linear-gradient(135deg,#0F1115 0%,#161A22 60%,#1a1d2e 100%)",
                   borderColor: "transparent",
@@ -486,7 +494,10 @@ const Landing: React.FC = () => {
                 >
                   STEP 01
                 </Typography>
-                <Typography variant="h4" sx={{ color: "#fff", mb: 1.5 }}>
+                <Typography
+                  variant="h4"
+                  sx={{ color: "#fff", mb: 1.5, fontSize: { xs: "1.2rem", md: "1.5rem" } }}
+                >
                   Create a Role & Share the Link
                 </Typography>
                 <Typography
@@ -560,7 +571,10 @@ const Landing: React.FC = () => {
                       <Icon name={step.icon} size={16} color={step.color} />
                     </Box>
                   </Box>
-                  <Typography variant="h5" sx={{ mb: 1 }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ mb: 1, fontSize: { xs: "1rem", md: "1.25rem" } }}
+                  >
                     {step.title}
                   </Typography>
                   <Typography
@@ -594,7 +608,7 @@ const Landing: React.FC = () => {
             </Typography>
             <Typography
               variant="h2"
-              sx={{ fontSize: { xs: "1.875rem", md: "2.5rem" } }}
+              sx={{ fontSize: { xs: "1.6rem", md: "2.5rem" } }}
             >
               Everything you need, nothing you don't
             </Typography>
@@ -602,7 +616,11 @@ const Landing: React.FC = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+              },
               gap: 2.5,
             }}
           >
@@ -610,12 +628,19 @@ const Landing: React.FC = () => {
               <SoftCard
                 key={i}
                 sx={{
-                  gridColumn: f.wide ? "1 / span 2" : "auto",
+                  // "wide" spans 2 cols on md+, full width on smaller
+                  gridColumn: {
+                    xs: "1/-1",
+                    sm: f.wide ? "1/-1" : "auto",
+                    md: f.wide ? "1 / span 2" : "auto",
+                  },
                   p: 3,
                   display: "flex",
-                  flexDirection: f.wide ? "row" : "column",
+                  flexDirection: f.wide ? { xs: "column", sm: "row" } : "column",
                   gap: f.wide ? "22px" : "12px",
-                  alignItems: f.wide ? "center" : "flex-start",
+                  alignItems: f.wide
+                    ? { xs: "flex-start", sm: "center" }
+                    : "flex-start",
                   cursor: "default",
                   transform: hoveredFeature === i ? "translateY(-4px)" : "none",
                   "&:hover": {
@@ -664,12 +689,12 @@ const Landing: React.FC = () => {
       {/* CTA */}
       <Box
         sx={{
-          mx: { xs: 3, md: 6 },
+          mx: { xs: 2, md: 6 },
           mb: 8,
           borderRadius: "28px",
           background:
             "linear-gradient(135deg,#0F1115 0%,#161A22 60%,#1a1d2e 100%)",
-          p: { xs: "48px 24px", md: "60px 48px" },
+          p: { xs: "40px 20px", md: "60px 48px" },
           position: "relative",
           overflow: "hidden",
         }}
@@ -699,7 +724,7 @@ const Landing: React.FC = () => {
             sx={{
               color: "#fff",
               mb: 2,
-              fontSize: { xs: "2rem", md: "2.75rem" },
+              fontSize: { xs: "1.6rem", md: "2.75rem" },
             }}
           >
             Ready to interview smarter?
@@ -708,7 +733,7 @@ const Landing: React.FC = () => {
             sx={{
               color: "rgba(255,255,255,0.45)",
               mb: 5,
-              fontSize: "1.125rem",
+              fontSize: { xs: "1rem", md: "1.125rem" },
               maxWidth: 380,
               mx: "auto",
             }}
@@ -746,7 +771,6 @@ const Landing: React.FC = () => {
           </Box>
         </Box>
       </Box>
-
     </Box>
   );
 };

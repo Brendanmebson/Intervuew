@@ -76,8 +76,6 @@ const Dashboard: React.FC = () => {
           api.get(`/User/${userId}/applicant/interviews`),
           api.get(`/User/${userId}/prep/interviews`),
         ]);
-        console.log("appliedRoles raw:", appliedRes.data);
-        console.log("prepSessions raw:", prepRes.data);
         setAppliedRoles(appliedRes.data ?? []);
         setPrepSessions(prepRes.data ?? []);
       } catch (err) {
@@ -110,11 +108,14 @@ const Dashboard: React.FC = () => {
       ]}
     >
       {/* Header */}
-      <Box className="fade-up" sx={{ mb: "32px" }}>
-        <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+      <Box className="fade-up" sx={{ mb: { xs: "20px", md: "32px" } }}>
+        <Typography
+          variant="h4"
+          sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+        >
           {greeting}, {userName} ✦
         </Typography>
-        <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+        <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
           Ready to practice? Your AI interviewer is waiting.
         </Typography>
       </Box>
@@ -124,7 +125,7 @@ const Dashboard: React.FC = () => {
         className="fade-up-1"
         sx={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1fr",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr", md: "2fr 1fr 1fr" },
           gap: "14px",
           mb: "22px",
         }}
@@ -134,9 +135,10 @@ const Dashboard: React.FC = () => {
           sx={{
             background: "linear-gradient(135deg,#0F1115,#1a1d2e)",
             borderRadius: RADIUS.card,
-            p: "30px",
+            p: { xs: "22px", md: "30px" },
             position: "relative",
             overflow: "hidden",
+            gridColumn: { xs: "1/-1", sm: "1/-1", md: "auto" },
           }}
         >
           <Box
@@ -166,7 +168,12 @@ const Dashboard: React.FC = () => {
           </Typography>
           <Typography
             variant="h5"
-            sx={{ color: "white", mb: "9px", lineHeight: 1.25, fontSize: 21 }}
+            sx={{
+              color: "white",
+              mb: "9px",
+              lineHeight: 1.25,
+              fontSize: { xs: 18, md: 21 },
+            }}
           >
             Start Your
             <br />
@@ -199,7 +206,7 @@ const Dashboard: React.FC = () => {
             color: COLORS.green,
           },
         ].map((c) => (
-          <SoftCard key={c.label} sx={{ p: "26px 22px" }}>
+          <SoftCard key={c.label} sx={{ p: { xs: "18px", md: "26px 22px" } }}>
             <Typography
               sx={{
                 fontSize: 11,
@@ -214,7 +221,7 @@ const Dashboard: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                fontSize: 38,
+                fontSize: { xs: 30, md: 38 },
                 fontWeight: 700,
                 letterSpacing: "-0.04em",
                 color: c.color,
@@ -235,13 +242,20 @@ const Dashboard: React.FC = () => {
 
       {/* Applied Roles */}
       <Box className="fade-up-2" sx={{ mb: "28px" }}>
-        <Typography variant="h6" sx={{ fontSize: 15, mb: "14px" }}>
+        <Typography
+          variant="h6"
+          sx={{ fontSize: { xs: 14, md: 15 }, mb: "14px" }}
+        >
           Applied Roles
         </Typography>
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2,1fr)",
+              md: "repeat(3,1fr)",
+            },
             gap: "13px",
           }}
         >
@@ -343,7 +357,10 @@ const Dashboard: React.FC = () => {
             mb: "14px",
           }}
         >
-          <Typography variant="h6" sx={{ fontSize: 15 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontSize: { xs: 14, md: 15 } }}
+          >
             Prep Sessions
           </Typography>
           <Typography
@@ -363,7 +380,7 @@ const Dashboard: React.FC = () => {
         {prepSessions.length === 0 && !loading ? (
           <SoftCard
             sx={{
-              p: "40px",
+              p: { xs: "28px", md: "40px" },
               textAlign: "center",
               cursor: "pointer",
               border: "2px dashed rgba(91,93,246,0.2)",
@@ -404,7 +421,11 @@ const Dashboard: React.FC = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2,1fr)",
+                md: "repeat(3,1fr)",
+              },
               gap: "13px",
             }}
           >

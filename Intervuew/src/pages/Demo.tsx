@@ -43,9 +43,6 @@ const highlights = [
   },
 ];
 
-console.log("DEMO_LINK:", import.meta.env.VITE_DEMO_LINK);
-console.log("ALL ENV:", import.meta.env);
-
 const Demo: React.FC = () => {
   const videoId = getYoutubeId(DEMO_LINK);
   const [started, setStarted] = useState(false);
@@ -67,8 +64,8 @@ const Demo: React.FC = () => {
       <Box
         sx={{
           position: "relative",
-          py: "80px",
-          px: "48px",
+          py: { xs: "48px", md: "80px" },
+          px: { xs: "20px", md: "48px" },
           overflow: "hidden",
           background:
             "linear-gradient(180deg,rgba(91,93,246,0.04) 0%,transparent 100%)",
@@ -91,7 +88,7 @@ const Demo: React.FC = () => {
           <Typography
             variant="h1"
             sx={{
-              fontSize: "clamp(36px,5vw,58px)",
+              fontSize: "clamp(28px,5vw,58px)",
               mb: "18px",
               letterSpacing: "-0.03em",
             }}
@@ -110,7 +107,11 @@ const Demo: React.FC = () => {
             </Box>
           </Typography>
           <Typography
-            sx={{ fontSize: 17, color: COLORS.textMuted, lineHeight: 1.7 }}
+            sx={{
+              fontSize: { xs: 15, md: 17 },
+              color: COLORS.textMuted,
+              lineHeight: 1.7,
+            }}
           >
             Watch the full product tour at your own pace — from role setup to
             final candidate report.
@@ -119,11 +120,18 @@ const Demo: React.FC = () => {
       </Box>
 
       {/* Main */}
-      <Box sx={{ maxWidth: 1060, mx: "auto", px: "48px", pb: "80px" }}>
+      <Box
+        sx={{
+          maxWidth: 1060,
+          mx: "auto",
+          px: { xs: "16px", md: "48px" },
+          pb: "80px",
+        }}
+      >
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "1.3fr 1fr",
+            gridTemplateColumns: { xs: "1fr", md: "1.3fr 1fr" },
             gap: "32px",
             alignItems: "start",
           }}
@@ -140,7 +148,6 @@ const Demo: React.FC = () => {
             >
               {!started ? (
                 <>
-                  {/* Thumbnail */}
                   <Box
                     component="img"
                     src={thumbnailUrl}
@@ -156,7 +163,6 @@ const Demo: React.FC = () => {
                       objectFit: "cover",
                     }}
                   />
-                  {/* Overlay */}
                   <Box
                     sx={{
                       position: "absolute",
@@ -164,7 +170,6 @@ const Demo: React.FC = () => {
                       background: "rgba(0,0,0,0.4)",
                     }}
                   />
-                  {/* Play button */}
                   <Box
                     onClick={() => setStarted(true)}
                     sx={{
@@ -181,8 +186,8 @@ const Demo: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: 76,
-                        height: 76,
+                        width: { xs: 60, md: 76 },
+                        height: { xs: 60, md: 76 },
                         borderRadius: "50%",
                         background: `linear-gradient(135deg,${COLORS.indigo},${COLORS.lavender})`,
                         display: "flex",
@@ -196,7 +201,7 @@ const Demo: React.FC = () => {
                         },
                       }}
                     >
-                      <PlayArrowIcon sx={{ color: "white", fontSize: 36 }} />
+                      <PlayArrowIcon sx={{ color: "white", fontSize: { xs: 28, md: 36 } }} />
                     </Box>
                     <Typography
                       sx={{
@@ -233,7 +238,7 @@ const Demo: React.FC = () => {
               )}
             </Box>
 
-            <Box sx={{ p: "20px 24px" }}>
+            <Box sx={{ p: { xs: "16px", md: "20px 24px" } }}>
               <Typography variant="h6" sx={{ mb: "4px", fontSize: 15 }}>
                 Full Product Walkthrough
               </Typography>
@@ -303,7 +308,7 @@ const Demo: React.FC = () => {
                 Create a free account and set up your first AI interview in
                 under 2 minutes.
               </Typography>
-              <GradientButton size="sm" to="/register" fullWidth>
+              <GradientButton size="sm" to="/Login" fullWidth>
                 Get Started Free
               </GradientButton>
             </SoftCard>

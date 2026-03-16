@@ -58,7 +58,6 @@ const OrgJobRoles: React.FC = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // Fetch org identity and name in parallel
         const [meRes, nameRes] = await Promise.all([
           api.get("/Organization/me"),
           api.get("/Organization"),
@@ -124,15 +123,20 @@ const OrgJobRoles: React.FC = () => {
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          alignItems: { xs: "flex-start", sm: "center" },
           mb: "28px",
+          gap: "12px",
+          flexWrap: "wrap",
         }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+          <Typography
+            variant="h4"
+            sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+          >
             Job Roles
           </Typography>
-          <Typography sx={{ fontSize: 15, color: COLORS.textMuted }}>
+          <Typography sx={{ fontSize: { xs: 13, md: 15 }, color: COLORS.textMuted }}>
             {jobs.length} roles total · {activeCount} active
           </Typography>
         </Box>
@@ -158,7 +162,7 @@ const OrgJobRoles: React.FC = () => {
           <SoftCard
             key={s.label}
             sx={{
-              p: "18px 22px",
+              p: { xs: "14px 16px", md: "18px 22px" },
               display: "flex",
               alignItems: "center",
               gap: "14px",
@@ -183,7 +187,7 @@ const OrgJobRoles: React.FC = () => {
             >
               {s.label}
             </Typography>
-            <Typography sx={{ fontSize: 26, fontWeight: 700, color: s.color }}>
+            <Typography sx={{ fontSize: { xs: 20, md: 26 }, fontWeight: 700, color: s.color }}>
               {s.val}
             </Typography>
           </SoftCard>
@@ -195,7 +199,7 @@ const OrgJobRoles: React.FC = () => {
         className="fade-up-2"
         sx={{ display: "flex", gap: "12px", mb: "18px", flexWrap: "wrap" }}
       >
-        <Box sx={{ flex: 1, minWidth: 200, position: "relative" }}>
+        <Box sx={{ flex: 1, minWidth: 160, position: "relative" }}>
           <Box
             sx={{
               position: "absolute",
@@ -223,6 +227,7 @@ const OrgJobRoles: React.FC = () => {
               color: COLORS.text,
               outline: "none",
               "&:focus": { borderColor: COLORS.indigo },
+              boxSizing: "border-box",
             }}
           />
         </Box>
@@ -233,6 +238,7 @@ const OrgJobRoles: React.FC = () => {
             borderRadius: "12px",
             border: "1px solid rgba(0,0,0,0.07)",
             overflow: "hidden",
+            flexShrink: 0,
           }}
         >
           {(["All", "Active", "Closed"] as StatusFilter[]).map((f) => (
@@ -240,7 +246,7 @@ const OrgJobRoles: React.FC = () => {
               key={f}
               onClick={() => setFilter(f)}
               sx={{
-                px: "16px",
+                px: { xs: "10px", md: "16px" },
                 py: "10px",
                 fontSize: 13,
                 fontWeight: 600,
@@ -262,7 +268,7 @@ const OrgJobRoles: React.FC = () => {
         className="fade-up-3"
         sx={{
           display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
+          gridTemplateColumns: { xs: "1fr", md: "repeat(2,1fr)" },
           gap: "14px",
         }}
       >
@@ -276,7 +282,7 @@ const OrgJobRoles: React.FC = () => {
             return (
               <SoftCard
                 key={interview.id}
-                sx={{ p: "24px 26px", cursor: "pointer" }}
+                sx={{ p: { xs: "20px", md: "24px 26px" }, cursor: "pointer" }}
                 onClick={() => nav(`/org/interview/${interview.id}`)}
               >
                 <Box
@@ -288,7 +294,13 @@ const OrgJobRoles: React.FC = () => {
                   }}
                 >
                   <Box
-                    sx={{ display: "flex", alignItems: "center", gap: "12px" }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      minWidth: 0,
+                      flex: 1,
+                    }}
                   >
                     <Box
                       sx={{
@@ -299,13 +311,21 @@ const OrgJobRoles: React.FC = () => {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
                       <Icon name="briefcase" size={18} color={COLORS.indigo} />
                     </Box>
-                    <Box>
+                    <Box sx={{ minWidth: 0 }}>
                       <Typography
-                        sx={{ fontWeight: 700, fontSize: 15, mb: "2px" }}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: 15,
+                          mb: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
                       >
                         {interview.role}
                       </Typography>
@@ -326,6 +346,8 @@ const OrgJobRoles: React.FC = () => {
                       fontSize: 11,
                       fontWeight: 700,
                       textTransform: "capitalize",
+                      flexShrink: 0,
+                      ml: "8px",
                     }}
                   >
                     {interview.status}

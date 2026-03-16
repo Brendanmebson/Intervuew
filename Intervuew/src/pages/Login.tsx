@@ -102,31 +102,32 @@ const Login: React.FC = () => {
         bgcolor: "#F8F9FC",
         position: "relative",
         overflow: "hidden",
+        px: 2,
       }}
     >
       {/* Background blobs */}
       <Box
         sx={{
           position: "absolute",
-          width: 600,
-          height: 600,
+          width: { xs: 300, md: 600 },
+          height: { xs: 300, md: 600 },
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(91, 94, 246, 0.72) 0%, transparent 70%)",
-          top: "-200px",
-          right: "-200px",
+          top: { xs: "-100px", md: "-200px" },
+          right: { xs: "-100px", md: "-200px" },
         }}
       />
       <Box
         sx={{
           position: "absolute",
-          width: 400,
-          height: 400,
+          width: { xs: 200, md: 400 },
+          height: { xs: 200, md: 400 },
           borderRadius: "50%",
           background:
             "radial-gradient(circle, rgba(154, 143, 255, 0.81) 0%, transparent 70%)",
-          bottom: "-150px",
-          left: "-150px",
+          bottom: { xs: "-80px", md: "-150px" },
+          left: { xs: "-80px", md: "-150px" },
         }}
       />
 
@@ -136,7 +137,6 @@ const Login: React.FC = () => {
           zIndex: 1,
           width: "100%",
           maxWidth: 440,
-          px: 3,
         }}
       >
         {/* Glass card */}
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
             borderRadius: 4,
             border: `1px solid ${alpha("#5B5DF6", 0.1)}`,
             boxShadow: "0px 24px 64px rgba(91,93,246,0.1)",
-            p: 4,
+            p: { xs: 3, md: 4 },
           }}
         >
           {/* Logo */}

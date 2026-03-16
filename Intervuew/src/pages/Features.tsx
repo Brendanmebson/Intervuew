@@ -108,8 +108,8 @@ const Features: React.FC = () => {
       <Box
         sx={{
           position: "relative",
-          py: "90px",
-          px: "48px",
+          py: { xs: "56px", md: "90px" },
+          px: { xs: "20px", md: "48px" },
           overflow: "hidden",
           background:
             "linear-gradient(180deg,rgba(91,93,246,0.04) 0%,transparent 100%)",
@@ -132,7 +132,7 @@ const Features: React.FC = () => {
           <Typography
             variant="h1"
             sx={{
-              fontSize: "clamp(36px,5vw,62px)",
+              fontSize: "clamp(28px,5vw,62px)",
               mb: "20px",
               letterSpacing: "-0.03em",
             }}
@@ -152,7 +152,7 @@ const Features: React.FC = () => {
           </Typography>
           <Typography
             sx={{
-              fontSize: 18,
+              fontSize: { xs: 15, md: 18 },
               color: COLORS.textMuted,
               lineHeight: 1.7,
               mb: "40px",
@@ -168,11 +168,22 @@ const Features: React.FC = () => {
       </Box>
 
       {/* Feature grid */}
-      <Box sx={{ maxWidth: 1140, mx: "auto", px: "48px", py: "40px" }}>
+      <Box
+        sx={{
+          maxWidth: 1140,
+          mx: "auto",
+          px: { xs: "16px", md: "48px" },
+          py: "40px",
+        }}
+      >
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: "repeat(3,1fr)",
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2,1fr)",
+              md: "repeat(3,1fr)",
+            },
             gap: "16px",
           }}
         >
@@ -180,7 +191,7 @@ const Features: React.FC = () => {
             <SoftCard
               key={i}
               sx={{
-                p: "30px",
+                p: { xs: "22px", md: "30px" },
                 transition:
                   "transform 0.22s ease,box-shadow 0.22s ease,border-color 0.22s ease",
                 border: `1px solid rgba(0,0,0,0.04)`,
@@ -261,14 +272,14 @@ const Features: React.FC = () => {
           background: alpha(COLORS.indigo, 0.025),
           borderTop: `1px solid ${alpha(COLORS.indigo, 0.07)}`,
           borderBottom: `1px solid ${alpha(COLORS.indigo, 0.07)}`,
-          py: "72px",
-          px: "48px",
+          py: { xs: "48px", md: "72px" },
+          px: { xs: "16px", md: "48px" },
         }}
       >
         <Box sx={{ maxWidth: 860, mx: "auto" }}>
           <Box sx={{ textAlign: "center", mb: "48px" }}>
             <SectionLabel>Why Intervuew</SectionLabel>
-            <Typography variant="h2" sx={{ fontSize: "clamp(26px,3vw,40px)" }}>
+            <Typography variant="h2" sx={{ fontSize: "clamp(22px,3vw,40px)" }}>
               See the difference
             </Typography>
           </Box>
@@ -278,7 +289,7 @@ const Features: React.FC = () => {
                 display: "grid",
                 gridTemplateColumns: "2fr 1fr 1fr",
                 background: "linear-gradient(135deg,#0F1115,#1a1d2e)",
-                px: "28px",
+                px: { xs: "16px", md: "28px" },
                 py: "18px",
               }}
             >
@@ -297,7 +308,7 @@ const Features: React.FC = () => {
                 <Typography
                   key={h}
                   sx={{
-                    fontSize: 13,
+                    fontSize: { xs: 11, md: 13 },
                     fontWeight: 700,
                     color:
                       h === "Intervuew"
@@ -325,7 +336,7 @@ const Features: React.FC = () => {
                 sx={{
                   display: "grid",
                   gridTemplateColumns: "2fr 1fr 1fr",
-                  px: "28px",
+                  px: { xs: "16px", md: "28px" },
                   py: "15px",
                   borderTop: "1px solid rgba(0,0,0,0.05)",
                   background:
@@ -333,7 +344,11 @@ const Features: React.FC = () => {
                 }}
               >
                 <Typography
-                  sx={{ fontSize: 14, fontWeight: 500, color: COLORS.text }}
+                  sx={{
+                    fontSize: { xs: 12, md: 14 },
+                    fontWeight: 500,
+                    color: COLORS.text,
+                  }}
                 >
                   {cap as string}
                 </Typography>
@@ -383,21 +398,34 @@ const Features: React.FC = () => {
         sx={{
           maxWidth: 1140,
           mx: "auto",
-          px: "48px",
-          py: "80px",
+          px: { xs: "16px", md: "48px" },
+          py: { xs: "48px", md: "80px" },
           textAlign: "center",
         }}
       >
         <Typography
           variant="h2"
-          sx={{ fontSize: "clamp(28px,3.5vw,46px)", mb: "16px" }}
+          sx={{ fontSize: "clamp(24px,3.5vw,46px)", mb: "16px" }}
         >
           Ready to modernise your hiring?
         </Typography>
-        <Typography sx={{ fontSize: 16, color: COLORS.textMuted, mb: "36px" }}>
+        <Typography
+          sx={{
+            fontSize: { xs: 14, md: 16 },
+            color: COLORS.textMuted,
+            mb: "36px",
+          }}
+        >
           Get started free — no credit card required.
         </Typography>
-        <Box sx={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            gap: "12px",
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <GradientButton size="lg" to="/login">
             Start now
           </GradientButton>

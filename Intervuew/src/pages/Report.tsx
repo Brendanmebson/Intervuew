@@ -116,7 +116,7 @@ const Report: React.FC = () => {
       sx={{
         minHeight: "100vh",
         background: COLORS.bg,
-        p: "32px 44px",
+        p: { xs: "20px 16px", md: "32px 44px" },
         maxWidth: 980,
         mx: "auto",
       }}
@@ -143,7 +143,10 @@ const Report: React.FC = () => {
         >
           ← Back
         </Box>
-        <Typography variant="h4" sx={{ fontSize: 25, mb: "4px" }}>
+        <Typography
+          variant="h4"
+          sx={{ fontSize: { xs: 20, md: 25 }, mb: "4px" }}
+        >
           Interview Report
         </Typography>
         <Typography sx={{ fontSize: 14, color: COLORS.textMuted }}>
@@ -157,7 +160,7 @@ const Report: React.FC = () => {
         className="fade-up-1"
         sx={{
           display: "grid",
-          gridTemplateColumns: "auto 1fr",
+          gridTemplateColumns: { xs: "1fr", sm: "auto 1fr" },
           gap: "18px",
           mb: "18px",
         }}
@@ -165,11 +168,11 @@ const Report: React.FC = () => {
         {/* Score ring */}
         <SoftCard
           sx={{
-            p: "34px",
+            p: { xs: "24px", md: "34px" },
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            minWidth: 210,
+            minWidth: { sm: 210 },
           }}
         >
           <Typography
@@ -210,7 +213,7 @@ const Report: React.FC = () => {
         </SoftCard>
 
         {/* Session info + cheating */}
-        <SoftCard sx={{ p: "30px 34px" }}>
+        <SoftCard sx={{ p: { xs: "20px", md: "30px 34px" } }}>
           <Typography variant="h6" sx={{ fontSize: 15, mb: "20px" }}>
             Session Details
           </Typography>
@@ -261,7 +264,6 @@ const Report: React.FC = () => {
               </Box>
             ))}
 
-            {/* Divider */}
             <Box sx={{ borderTop: "1px solid rgba(0,0,0,0.05)", pt: "14px" }}>
               {report.cheating_detected === null ? (
                 <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
@@ -293,6 +295,7 @@ const Report: React.FC = () => {
                         ? alpha("#ef4444", 0.2)
                         : alpha(COLORS.green, 0.2)
                     }`,
+                    flexWrap: "wrap",
                   }}
                 >
                   <Typography sx={{ fontSize: 18 }}>
@@ -328,7 +331,7 @@ const Report: React.FC = () => {
 
       {/* Proctoring alerts table */}
       {alerts.length > 0 && (
-        <SoftCard className="fade-up-2" sx={{ p: "26px 30px" }}>
+        <SoftCard className="fade-up-2" sx={{ p: { xs: "20px", md: "26px 30px" } }}>
           <Typography
             sx={{
               fontSize: 11,
@@ -342,11 +345,10 @@ const Report: React.FC = () => {
             Proctoring Alerts · {alerts.length} flagged
           </Typography>
 
-          {/* Table header */}
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "140px 1fr",
+              gridTemplateColumns: "120px 1fr",
               gap: "12px",
               p: "10px 16px",
               borderRadius: "10px 10px 0 0",
@@ -376,7 +378,7 @@ const Report: React.FC = () => {
                 key={i}
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "140px 1fr",
+                  gridTemplateColumns: "120px 1fr",
                   gap: "12px",
                   p: "12px 16px",
                   alignItems: "center",
